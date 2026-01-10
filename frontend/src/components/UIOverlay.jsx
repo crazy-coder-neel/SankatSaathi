@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const UIOverlay = () => {
+const UIOverlay = ({ activeSection, setActiveSection }) => {
     const alerts = [
         { id: 1, type: 'critical', msg: 'CRITICAL: Flood Warning - Zone A', time: '2m ago' },
         { id: 2, type: 'warning', msg: 'Seismic Activity Detected - Zone B', time: '15m ago' },
@@ -26,8 +26,13 @@ const UIOverlay = () => {
                 </div>
 
                 <nav className="hidden md:flex gap-2 glass-panel rounded-full px-2 py-2">
-                    {['Overview', 'Incidents', 'Resources', 'Analytics'].map((item, i) => (
-                        <button key={item} className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 ${i === 0 ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'text-gray-400'}`}>
+                    {['Overview', 'Incidents', 'Resources', 'Analytics'].map((item) => (
+                        <button
+                            key={item}
+                            onClick={() => setActiveSection(item)}
+                            className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 ${activeSection === item ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'text-gray-400'
+                                }`}
+                        >
                             {item}
                         </button>
                     ))}
@@ -62,11 +67,11 @@ const UIOverlay = () => {
                     <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                         {alerts.map(alert => (
                             <div key={alert.id} className={`glass-alert p-3 rounded-md border-l-4 ${alert.type === 'critical' ? 'border-crisis-red' :
-                                    (alert.type === 'warning' ? 'border-crisis-orange' : 'border-crisis-green')
+                                (alert.type === 'warning' ? 'border-crisis-orange' : 'border-crisis-green')
                                 }`}>
                                 <div className="flex justify-between items-start mb-1">
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${alert.type === 'critical' ? 'text-crisis-red border-crisis-red/30 bg-crisis-red/10' :
-                                            (alert.type === 'warning' ? 'text-crisis-orange border-crisis-orange/30 bg-crisis-orange/10' : 'text-crisis-green border-crisis-green/30 bg-crisis-green/10')
+                                        (alert.type === 'warning' ? 'text-crisis-orange border-crisis-orange/30 bg-crisis-orange/10' : 'text-crisis-green border-crisis-green/30 bg-crisis-green/10')
                                         }`}>
                                         {alert.type.toUpperCase()}
                                     </span>
