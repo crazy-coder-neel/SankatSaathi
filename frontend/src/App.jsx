@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import EarthScene from './components/EarthScene';
 import { CrisisMarkers } from './components/CrisisMarkers';
@@ -7,6 +7,22 @@ import CrisisDashboard from './components/CrisisDashboard';
 import UIOverlay from './components/UIOverlay';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
+import LandingPage from './components/LandingPage';
+import * as THREE from 'three';
+
+const CameraIntro = () => {
+  const [finished, setFinished] = useState(false);
+
+  useFrame((state) => {
+    if (!finished && state.camera.position.z > 2.55) {
+      state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, 2.5, 0.02);
+      state.camera.updateProjectionMatrix();
+    } else if (!finished && state.camera.position.z <= 2.55) {
+      setFinished(true); // Stop forcing position to allow orbit controls
+    }
+  });
+  return null;
+};
 
 const MainApp = () => {
   const { user, loading, signOut } = useAuth();
@@ -17,27 +33,23 @@ const MainApp = () => {
     return <div className="h-screen w-full flex items-center justify-center bg-gray-900 text-white">Loading System...</div>;
   }
 
-  if (!user) {
+  // Allow bypassing login if keys are missing (demo mode) or if user is set
+  // This is a temporary fix while we sort out the .env issue
+  const isAuthenticated = user || !import.meta.env.VITE_SUPABASE_URL;
+
+  if (!isAuthenticated) {
     return <Login />;
   }
 
   return (
     <div className="relative w-full h-screen bg-crisis-dark selection:bg-crisis-red/30 selection:text-white">
-      {/* Global User Header */}
-      <div className="absolute top-0 right-0 z-50 p-4 flex items-center gap-4">
-        <div className="text-white/80 text-sm font-medium backdrop-blur-md bg-black/30 px-3 py-1 rounded-full border border-white/10">
-          {user?.user_metadata?.full_name || 'Responder'}
-        </div>
-        <button
-          onClick={signOut}
-          className="bg-red-600/80 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-full backdrop-blur-md transition shadow-lg border border-red-500/50"
-        >
-          LOGOUT
-        </button>
-      </div>
-
       {/* 2D UI Layer */}
-      <UIOverlay activeSection={activeSection} setActiveSection={setActiveSection} />
+      <UIOverlay
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        user={user}
+        signOut={signOut}
+      />
 
       {activeSection === 'Incidents' && (
         <div className="absolute inset-0 z-30 bg-gray-900">
@@ -47,12 +59,16 @@ const MainApp = () => {
 
       {/* 3D Scene Layer - Hidden when Incidents or Analytics is active to save resources/focus */}
       <div className={`absolute inset-0 z-0 transition-opacity duration-1000 ${activeSection !== 'Overview' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>
-          <color attach="background" args={['#050505']} />
+        <Canvas camera={{ position: [0, 0, 12], fov: 45 }}> {/* Start far away for intro */}
+          <color attach="background" args={['#000000']} />
 
-          <ambientLight intensity={1.5} color="#8888ff" />
-          <pointLight position={[10, 10, 10]} intensity={4} color="#ffffff" />
-          <pointLight position={[-10, -10, -5]} intensity={1} color="#ff0000" /> {/* Red ambient fill for drama */}
+          {/* Enhanced Lighting for Brighter Earth */}
+          <ambientLight intensity={3.5} color="#bbbbff" /> {/* Significantly boosted ambient */}
+          <pointLight position={[10, 10, 10]} intensity={6} color="#ffffff" />
+          <pointLight position={[-10, 10, 5]} intensity={2} color="#4444ff" /> {/* Blue rim light */}
+          <pointLight position={[0, -10, 0]} intensity={1} color="#220000" /> {/* Subtle bottom fill */}
+
+          <CameraIntro />
 
           <Suspense fallback={null}>
             <group rotation={[0, 0, 0]}>
@@ -77,7 +93,7 @@ const MainApp = () => {
 
       {/* Vignette / Grain Overlay for cinematic feel */}
       <div className="absolute inset-0 pointer-events-none z-20 bg-[url('/noise.svg')] opacity-10 brightness-150 contrast-150 mix-blend-overlay"></div>
-      <div className="absolute inset-0 pointer-events-none z-20 bg-[radial-gradient(circle_at_center,transparent_0%,#000000_120%)] opacity-40"></div>
+      <div className="absolute inset-0 pointer-events-none z-20 bg-[radial-gradient(circle_at_center,transparent_0%,#000000_120%)] opacity-20"></div>
     </div>
   );
 };

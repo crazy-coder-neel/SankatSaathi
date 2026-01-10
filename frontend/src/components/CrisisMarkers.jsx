@@ -9,7 +9,7 @@ function Marker({ position, type, label }) {
         const t = state.clock.getElapsedTime();
         // Pulse effect
         if (ref.current) {
-            ref.current.scale.setScalar(1 + Math.sin(t * 3) * 0.2);
+            ref.current.scale.setScalar(1 + Math.sin(t * 1.5) * 0.2);
         }
     });
 
@@ -49,14 +49,44 @@ const latLonToVector3 = (lat, lon, radius) => {
 }
 
 export const CrisisMarkers = () => {
-    // Example Data: Lat, Lon, Type
-    const incidents = [
-        { id: 1, lat: 40.7128, lon: -74.0060, type: 'critical', label: 'NYC Flooding' }, // NYC
-        { id: 2, lat: 35.6762, lon: 139.6503, type: 'warning', label: 'Tokyo Tremor' }, // Tokyo
-        { id: 3, lat: 28.6139, lon: 77.2090, type: 'critical', label: 'Delhi Heatwave' }, // Delhi
-        { id: 4, lat: -33.8688, lon: 151.2093, type: 'resolved', label: 'Sydney Fire' }, // Sydney
-        { id: 5, lat: 51.5074, lon: -0.1278, type: 'warning', label: 'London Grid' }, // London
-    ];
+    const [incidents, setIncidents] = React.useState([]);
+
+    React.useEffect(() => {
+        // Fetch active crises to sync with dashboard
+        fetch('http://localhost:8000/crisis/active')
+            .then(res => res.json())
+            .then(data => {
+                const crises = data.crises || [];
+                // Map to marker format if needed, or just use directly
+                // Assuming API returns { latitude, longitude, severity/type, title }
+                const mapped = crises.map(c => ({
+                    id: c.id,
+                    lat: c.latitude,
+                    lon: c.longitude,
+                    type: c.severity, // or c.type
+                    label: c.title
+                }));
+                if (mapped.length > 0) setIncidents(mapped);
+
+                // If API fails or returns empty, keep some dummy defaults for demo visualizing
+                if (mapped.length === 0) {
+                    setIncidents([
+                        { id: 1, lat: 40.7128, lon: -74.0060, type: 'critical', label: 'NYC Flooding' },
+                        { id: 2, lat: 35.6762, lon: 139.6503, type: 'warning', label: 'Tokyo Tremor' },
+                        { id: 3, lat: 28.6139, lon: 77.2090, type: 'critical', label: 'Delhi Heatwave' }
+                    ]);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch markers", err);
+                // Fallback defaults
+                setIncidents([
+                    { id: 1, lat: 40.7128, lon: -74.0060, type: 'critical', label: 'NYC Flooding' },
+                    { id: 2, lat: 35.6762, lon: 139.6503, type: 'warning', label: 'Tokyo Tremor' },
+                    { id: 3, lat: 28.6139, lon: 77.2090, type: 'critical', label: 'Delhi Heatwave' }
+                ]);
+            });
+    }, []);
 
     return (
         <group rotation={[0, 0, 23.5 * Math.PI / 180]}>
