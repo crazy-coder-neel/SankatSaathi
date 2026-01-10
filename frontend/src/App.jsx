@@ -5,18 +5,48 @@ import EarthScene from './components/EarthScene';
 import { CrisisMarkers } from './components/CrisisMarkers';
 import CrisisDashboard from './components/CrisisDashboard';
 import UIOverlay from './components/UIOverlay';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Login from './components/Login';
 
-function App() {
+const MainApp = () => {
+  const { user, loading, signOut } = useAuth();
   const [rotation, setRotation] = useState(0);
+  const [activeSection, setActiveSection] = useState('Overview');
+
+  if (loading) {
+    return <div className="h-screen w-full flex items-center justify-center bg-gray-900 text-white">Loading System...</div>;
+  }
+
+  if (!user) {
+    return <Login />;
+  }
 
   return (
     <div className="relative w-full h-screen bg-crisis-dark selection:bg-crisis-red/30 selection:text-white">
-      <CrisisDashboard />
-      {/* 2D UI Layer */}
-      <UIOverlay />
+      {/* Global User Header */}
+      <div className="absolute top-0 right-0 z-50 p-4 flex items-center gap-4">
+        <div className="text-white/80 text-sm font-medium backdrop-blur-md bg-black/30 px-3 py-1 rounded-full border border-white/10">
+          {user?.user_metadata?.full_name || 'Responder'}
+        </div>
+        <button
+          onClick={signOut}
+          className="bg-red-600/80 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-full backdrop-blur-md transition shadow-lg border border-red-500/50"
+        >
+          LOGOUT
+        </button>
+      </div>
 
-      {/* 3D Scene Layer */}
-      <div className="absolute inset-0 z-0">
+      {/* 2D UI Layer */}
+      <UIOverlay activeSection={activeSection} setActiveSection={setActiveSection} />
+
+      {activeSection === 'Incidents' && (
+        <div className="absolute inset-0 z-30 bg-gray-900">
+          <CrisisDashboard />
+        </div>
+      )}
+
+      {/* 3D Scene Layer - Hidden when Incidents or Analytics is active to save resources/focus */}
+      <div className={`absolute inset-0 z-0 transition-opacity duration-1000 ${activeSection !== 'Overview' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>
           <color attach="background" args={['#050505']} />
 
@@ -49,6 +79,14 @@ function App() {
       <div className="absolute inset-0 pointer-events-none z-20 bg-[url('/noise.svg')] opacity-10 brightness-150 contrast-150 mix-blend-overlay"></div>
       <div className="absolute inset-0 pointer-events-none z-20 bg-[radial-gradient(circle_at_center,transparent_0%,#000000_120%)] opacity-40"></div>
     </div>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 }
 
