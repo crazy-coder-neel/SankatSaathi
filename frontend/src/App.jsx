@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import EarthScene from './components/EarthScene';
 import { CrisisMarkers } from './components/CrisisMarkers';
+import CrisisDashboard from './components/CrisisDashboard';
 import UIOverlay from './components/UIOverlay';
 
 function App() {
@@ -10,7 +11,7 @@ function App() {
 
   return (
     <div className="relative w-full h-screen bg-crisis-dark selection:bg-crisis-red/30 selection:text-white">
-
+      <CrisisDashboard />
       {/* 2D UI Layer */}
       <UIOverlay />
 
