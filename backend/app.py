@@ -51,13 +51,13 @@ async def health_check():
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    print("🚀 CrisisNet Dispatch API starting up...")
-    print("📡 WebSocket endpoints active:")
+    print("CrisisNet Dispatch API starting up...")
+    print("WebSocket endpoints active:")
     print("   - /crisis/ws/dashboard (Dashboard updates)")
     print("   - /crisis/ws/agency/{agency_id} (Agency connections)")
     print("")
-    print("🔗 REST API available at: http://localhost:8000")
-    print("📚 API Documentation: http://localhost:8000/docs")
+    print("REST API available at: http://localhost:8000")
+    print("API Documentation: http://localhost:8000/docs")
 
 if __name__ == "__main__":
     uvicorn.run(

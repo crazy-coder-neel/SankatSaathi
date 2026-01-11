@@ -8,6 +8,7 @@ const EarthScene = ({ setRotation }) => {
     const earthRef = useRef();
     const cloudsRef = useRef();
     const groupRef = useRef();
+    const wireframeRef = useRef();
 
     // Load textures
     const { colorMap, normalMap, specularMap, cloudsMap, lightsMap } = useEarthTextures();
@@ -18,6 +19,11 @@ const EarthScene = ({ setRotation }) => {
         // Rotate Earth slowly
         if (earthRef.current) {
             earthRef.current.rotation.y = elapsedTime / 10;
+        }
+
+        // Rotate Wireframe together
+        if (wireframeRef.current) {
+            wireframeRef.current.rotation.y = elapsedTime / 10;
         }
 
         // Rotate Clouds slightly faster/independently
@@ -53,15 +59,25 @@ const EarthScene = ({ setRotation }) => {
                 />
             </mesh>
 
-            {/* Earth Sphere */}
+            {/* Earth Sphere - Using Phong for Specular Map support */}
             <mesh ref={earthRef}>
                 <sphereGeometry args={[1, 64, 64]} />
-                <meshStandardMaterial
+                <meshPhongMaterial
                     map={colorMap}
                     normalMap={normalMap}
                     specularMap={specularMap}
-                    roughness={0.7}
-                    metalness={0.1}
+                    shininess={5}
+                />
+            </mesh>
+
+            {/* Wireframe Overlay for "Global Lines" Visibility */}
+            <mesh ref={wireframeRef} scale={[1.002, 1.002, 1.002]}>
+                <sphereGeometry args={[1, 32, 32]} />
+                <meshBasicMaterial
+                    color="#0044aa" // Deep blue/darker contrast
+                    wireframe={true}
+                    transparent={true}
+                    opacity={0.15} // Visible but not overwhelming
                 />
             </mesh>
 

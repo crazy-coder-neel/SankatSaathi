@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import * as THREE from 'three';
@@ -19,19 +19,41 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 const CameraController = () => {
   const location = useLocation();
+  const { camera } = useThree();
 
-  useFrame((state) => {
-    // Smoothly move camera based on route to frame the earth appropriately
-    // Landing Page: Earth on Right (x: 2)
-    // Internal Pages: Earth in background/center but zoomed out or shifted
+  useEffect(() => {
+    // Target position based on route
+    const targetX = location.pathname === '/' ? 2.5 : 5;
+    const targetZ = location.pathname === '/' ? 5.0 : 8;
 
-    const targetX = location.pathname === '/' ? 2 : 5; // Push further right on internal pages or keep centered background
-    const targetZ = location.pathname === '/' ? 6.5 : 8; // Zoom out on internal pages
+    // Animate camera to new position
+    // We use a simple GSAP-like approach or just standard TWEEN if available, 
+    // but since we want to keep it simple without extra deps if possible, we can use a temporary interval or useFrame with a completion condition.
+    // However, the easiest way to coexist with OrbitControls is to just update the controls target if needed, 
+    // or assume controls will handle the "lookAt".
 
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, targetX, 0.02);
-    state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, targetZ, 0.02);
-    state.camera.lookAt(0, 0, 0);
-  });
+    // Let's use a simple animation that runs for a short duration then stops
+    let startX = camera.position.x;
+    let startZ = camera.position.z;
+    let startTime = Date.now();
+    let duration = 1500; // 1.5s transition
+
+    const animate = () => {
+      let now = Date.now();
+      let progress = Math.min((now - startTime) / duration, 1);
+      // Ease out cubic
+      let ease = 1 - Math.pow(1 - progress, 3);
+
+      camera.position.x = startX + (targetX - startX) * ease;
+      camera.position.z = startZ + (targetZ - startZ) * ease;
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    animate();
+
+  }, [location, camera]);
 
   return null;
 };
@@ -97,7 +119,7 @@ const MainApp = () => {
         <Navbar user={user} signOut={signOut} isSystemOnline={isSystemOnline} />
 
         {/* Content Routes - Scrollable Container for Pages */}
-        <div className="absolute inset-0 pt-[80px] z-20 overflow-y-auto custom-scrollbar">
+        <div className="absolute inset-0 pt-[80px] z-20 overflow-y-auto custom-scrollbar pointer-events-none">
           <Routes>
             <Route path="/" element={<LandingPage onSystemInitialize={() => setIsSystemOnline(true)} />} />
             <Route path="/intelligence" element={<CrisisDashboard />} />
@@ -131,10 +153,9 @@ const MainApp = () => {
             <OrbitControls
               enableZoom={false}
               enablePan={false}
-              rotateSpeed={0.3}
+              enableRotate={true}
+              rotateSpeed={0.5}
               target={[0, 0, 0]}
-              minPolarAngle={Math.PI / 2 - 0.5}
-              maxPolarAngle={Math.PI / 2 + 0.5}
             />
           </Canvas>
         </div>
