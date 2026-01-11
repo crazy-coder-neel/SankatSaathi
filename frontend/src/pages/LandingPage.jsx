@@ -23,7 +23,7 @@ const LandingPage = ({ onSystemInitialize }) => {
         <div className="w-full relative z-10 scroll-smooth pointer-events-none">
 
             {/* HERO SECTION */}
-            <div className="h-screen w-full relative flex flex-col justify-center px-6 md:px-12 lg:px-24 pointer-events-none">
+            <div className="h-screen w-full relative flex flex-col justify-center px-0 pointer-events-none">
                 <div className="pointer-events-auto">
                     <HeroSection onInitialize={handleInitialize} />
                 </div>
