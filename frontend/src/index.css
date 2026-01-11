@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: dark;
-  color: rgba(255, 255, 255, 0.87);
+  color: rgba(255, 255, 255, 0.9);
   background-color: #050505;
 }
 
@@ -16,37 +16,95 @@ body {
   padding: 0;
   width: 100vw;
   height: 100vh;
-  overflow: hidden; /* Prevent native scroll, we'll implement custom if needed or let canvas handle it */
+  overflow: hidden;
+  background-color: #020202;
+  background-image:
+    radial-gradient(circle at 50% 0%, #1a1a2e 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, #0d0d14 0%, transparent 40%);
 }
 
-/* Custom Scrollbar for side panels */
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 59, 48, 0.3);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 59, 48, 0.6);
 }
 
+
 .glass-panel {
-  background: rgba(10, 10, 10, 0.4);
+  background: rgba(5, 5, 8, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 }
 
-.glass-alert {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  border-left: 4px solid;
+.glass-popup .leaflet-popup-content-wrapper {
+  background: rgba(5, 5, 10, 0.9);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.glass-popup .leaflet-popup-tip {
+  background: rgba(5, 5, 10, 0.9);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 59, 48, 0.3);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 59, 48, 0.6);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 15px rgba(255, 59, 48, 0.6);
+}
+
+.border-gradient-b {
+  border-bottom: 1px solid;
+  border-image: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent) 1;
+}
+
+.font-display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.clip-path-slant {
+  clip-path: polygon(0 0, 100% 0, 90% 100%, 10% 100%);
 }

@@ -1,15 +1,14 @@
-import { TextureLoader } from 'three';
-import { useLoader } from '@react-three/fiber';
+import { useTexture } from '@react-three/drei';
 
-// Using high-quality standard textures from reliable CDNs
 export const useEarthTextures = () => {
-    const [colorMap, normalMap, specularMap, cloudsMap, lightsMap] = useLoader(TextureLoader, [
-        '/textures/Earth.webp', // Local high-res texture
-        '/textures/earth-topology.png',
-        '/textures/earth-water.png',
-        '/textures/earth-clouds.png',
-        '/textures/earth-night.jpg',
-    ]);
+    // Using simple texture loading with Drei's useTexture which suspends automatically
+    const textures = useTexture({
+        colorMap: '/textures/Earth.webp',
+        normalMap: '/textures/earth-topology.png',
+        specularMap: '/textures/earth-water.png',
+        cloudsMap: '/textures/earth-clouds.png',
+        lightsMap: '/textures/earth-night.jpg',
+    });
 
-    return { colorMap, normalMap, specularMap, cloudsMap, lightsMap };
+    return textures;
 };

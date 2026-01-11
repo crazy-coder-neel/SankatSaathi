@@ -1,0 +1,126 @@
+import React from 'react';
+import { clsx } from 'clsx';
+import { ShieldAlert, Activity, Users, ChevronDown, UserCircle } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+
+const Navbar = ({ user, signOut, isSystemOnline }) => {
+    const location = useLocation();
+
+    return (
+        <nav className="fixed top-0 left-0 right-0 z-50 h-[80px] bg-gradient-to-b from-black/80 to-transparent pointer-events-none flex flex-col">
+            {/* Top Status Bar */}
+            <div className="w-full h-[40px] border-b border-white/10 bg-glass-bg backdrop-blur-md pointer-events-auto flex items-center justify-between px-8">
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-crisis-red animate-pulse" />
+                        <span className="text-sm font-display font-bold tracking-wider text-white">SANKAT<span className="text-crisis-red">SAATHI</span></span>
+                    </div>
+                    <div className="h-4 w-[1px] bg-white/10"></div>
+                    <span className="text-[10px] font-mono text-gray-400 tracking-[0.2em] uppercase">Global Response System v2.0</span>
+                </div>
+
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSystemOnline ? 'bg-green-500 animate-none' : 'bg-red-500 animate-pulse'}`}></span>
+                        <span className={`text-[10px] font-mono ${isSystemOnline ? 'text-green-500' : 'text-red-500'}`}>
+                            SYSTEM: {isSystemOnline ? 'ONLINE' : 'OFFLINE MODE'}
+                        </span>
+                    </div>
+                    <div className="text-[10px] font-mono text-gray-500 flex gap-2">
+                        <span>UTC</span>
+                        <span className="text-white">{new Date().toISOString().slice(11, 19)}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Nav */}
+            <div className="flex-1 px-8 flex items-center justify-between pointer-events-auto backdrop-blur-sm bg-black/20">
+                <div className="flex items-center">
+                    <Link
+                        to="/"
+                        className={clsx(
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            location.pathname === '/' ? "text-white" : "text-gray-500 hover:text-white"
+                        )}
+                    >
+                        Overview
+                        {location.pathname === '/' && (
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-crisis-red shadow-[0_0_10px_#FF3B30]"></span>
+                        )}
+                    </Link>
+                    <Link
+                        to="/intelligence"
+                        className={clsx(
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            location.pathname === '/intelligence' ? "text-white" : "text-gray-500 hover:text-white"
+                        )}
+                    >
+                        Incidents
+                        {location.pathname === '/intelligence' && (
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-crisis-red shadow-[0_0_10px_#FF3B30]"></span>
+                        )}
+                    </Link>
+                    <Link
+                        to="/coordination"
+                        className={clsx(
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            location.pathname === '/coordination' ? "text-white" : "text-gray-500 hover:text-white"
+                        )}
+                    >
+                        Coordination
+                        {location.pathname === '/coordination' && (
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-crisis-red shadow-[0_0_10px_#FF3B30]"></span>
+                        )}
+                    </Link>
+                    <Link
+                        to="/analytics"
+                        className={clsx(
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            location.pathname === '/analytics' ? "text-white" : "text-gray-500 hover:text-white"
+                        )}
+                    >
+                        Analytics
+                        {location.pathname === '/analytics' && (
+                            <span className="absolute bottom-0 left-0 w-full h-[2px] bg-crisis-red shadow-[0_0_10px_#FF3B30]"></span>
+                        )}
+                    </Link>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    {/* Widget 1 */}
+                    <div className="flex flex-col items-end border-r border-white/10 pr-4">
+                        <span className="text-[10px] text-gray-500 font-mono uppercase">Active Units</span>
+                        <span className="text-lg font-mono font-bold text-crisis-cyan leading-none">2,405</span>
+                    </div>
+
+                    {/* Widget 2 */}
+                    <div className="flex flex-col items-end border-r border-white/10 pr-4">
+                        <span className="text-[10px] text-gray-500 font-mono uppercase">Critical</span>
+                        <span className="text-lg font-mono font-bold text-crisis-red animate-pulse leading-none">12</span>
+                    </div>
+
+                    {/* Profile */}
+                    <div className="flex items-center gap-3 pl-2 group cursor-pointer">
+                        <div className="text-right">
+                            <div className="text-xs font-bold text-white group-hover:text-crisis-red transition-colors">COMMANDER</div>
+                            <div className="text-[10px] text-gray-500 font-mono">ID: {user?.id?.slice(0, 6) || 'UNKNOWN'}</div>
+                        </div>
+                        <div className="relative">
+                            <UserCircle className="w-8 h-8 text-gray-400 group-hover:text-white transition-colors" />
+                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-black rounded-full"></div>
+                        </div>
+
+                        <button
+                            onClick={signOut}
+                            className="ml-4 px-3 py-1 border border-crisis-red/30 bg-crisis-red/10 text-crisis-red text-[10px] font-bold uppercase hover:bg-crisis-red hover:text-white transition-all duration-300 rounded-sm"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    );
+};
+
+export default Navbar;

@@ -11,19 +11,28 @@ const FeatureCard = ({ icon: Icon, title, desc }) => (
     </div>
 );
 
-const LandingPage = () => {
+const LandingPage = ({ onLaunch }) => {
     return (
         <div className="w-full text-white">
             {/* Hero Spacer - Allows 3D Earth to be visible and interactable */}
-            {/* pointer-events-none allows clicking through to the canvas */}
+            {/* pointer-events-auto allowed on button specifically */}
             <div className="h-screen w-full flex flex-col justify-end pb-32 px-10 pointer-events-none">
-                <div className="max-w-4xl z-10">
+                <div className="max-w-4xl z-10 pointer-events-auto">
                     <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-6 bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
                         PLANETARY <br /> <span className="text-red-500">RESILIENCE</span>
                     </h1>
-                    <p className="text-xl md:text-2xl text-gray-300 max-w-2xl font-light border-l-4 border-red-500 pl-6">
+                    <p className="text-xl md:text-2xl text-gray-300 max-w-2xl font-light border-l-4 border-red-500 pl-6 mb-8">
                         Advanced crisis coordination and real-time global monitoring system for the next generation of emergency response.
                     </p>
+                    <button
+                        onClick={onLaunch}
+                        className="group relative px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold tracking-widest uppercase rounded-sm overflow-hidden transition-all shadow-[0_0_30px_rgba(220,38,38,0.5)] hover:shadow-[0_0_50px_rgba(220,38,38,0.8)] cursor-pointer"
+                    >
+                        <span className="relative z-10 flex items-center gap-2">
+                            Initialize System <Zap size={20} className="group-hover:text-yellow-300 transition-colors" />
+                        </span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    </button>
                 </div>
             </div>
 
