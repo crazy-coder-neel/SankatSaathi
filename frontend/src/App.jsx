@@ -1,7 +1,7 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import * as THREE from 'three';
 
 // Components
@@ -28,12 +28,6 @@ const CameraController = () => {
     const targetZ = location.pathname === '/' ? 5.0 : 8;
 
     // Animate camera to new position
-    // We use a simple GSAP-like approach or just standard TWEEN if available, 
-    // but since we want to keep it simple without extra deps if possible, we can use a temporary interval or useFrame with a completion condition.
-    // However, the easiest way to coexist with OrbitControls is to just update the controls target if needed, 
-    // or assume controls will handle the "lookAt".
-
-    // Let's use a simple animation that runs for a short duration then stops
     let startX = camera.position.x;
     let startZ = camera.position.z;
     let startTime = Date.now();
@@ -59,11 +53,24 @@ const CameraController = () => {
   return null;
 };
 
+const ProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
+  // If no user and Supabase is configured, redirect to login
+  const isAuthRequired = !!import.meta.env.VITE_SUPABASE_URL;
+
+  if (isAuthRequired && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
 const MainApp = () => {
   const { user, loading, signOut } = useAuth();
   const [rotation, setRotation] = useState(0);
   const [isSystemOnline, setIsSystemOnline] = useState(false);
   const [bootFlash, setBootFlash] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     if (isSystemOnline) {
@@ -107,76 +114,94 @@ const MainApp = () => {
     );
   }
 
-  // Allow bypassing login if keys are missing (demo mode) or if user is set
-  const isAuthenticated = user || !import.meta.env.VITE_SUPABASE_URL;
-
-  if (!isAuthenticated) return <Login />;
+  const isLoginPage = location.pathname === '/login';
 
   return (
-    <BrowserRouter>
-      <div className="relative w-full h-screen bg-crisis-deep selection:bg-crisis-red/30 selection:text-white overflow-hidden">
+    <div className="relative w-full h-screen bg-crisis-deep selection:bg-crisis-red/30 selection:text-white overflow-hidden">
 
-        {/* 2D UI Layer */}
-        <Navbar user={user} signOut={signOut} isSystemOnline={isSystemOnline} />
+      {/* 2D UI Layer - Navbar only shows if NOT on login page */}
+      {!isLoginPage && <Navbar user={user} signOut={signOut} isSystemOnline={isSystemOnline} />}
 
-        {/* Content Routes - Scrollable Container for Pages */}
-        <div className="absolute inset-0 pt-[80px] z-20 overflow-y-auto custom-scrollbar pointer-events-none">
+      {/* Content Routes - Scrollable Container for Pages */}
+      <div className={`absolute inset-0 ${!isLoginPage ? 'pt-[80px]' : ''} z-20 overflow-y-auto custom-scrollbar pointer-events-none`}>
+        <div className="pointer-events-auto min-h-full">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<LandingPage onSystemInitialize={() => setIsSystemOnline(true)} />} />
-            <Route path="/intelligence" element={<CrisisDashboard />} />
-            <Route path="/report" element={<IncidentReport />} />
-            <Route path="/coordination" element={<ResourcesPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/login" element={user ? <Navigate to="/intelligence" /> : <Login />} />
+
+            {/* Protected Routes */}
+            <Route path="/intelligence" element={
+              <ProtectedRoute>
+                <CrisisDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/report" element={
+              <ProtectedRoute>
+                <IncidentReport />
+              </ProtectedRoute>
+            } />
+            <Route path="/coordination" element={
+              <ProtectedRoute>
+                <ResourcesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <AnalyticsPage />
+              </ProtectedRoute>
+            } />
           </Routes>
         </div>
-
-        {/* 3D Scene Layer (Persistent Background) */}
-        <div className="absolute inset-0 z-0 pointer-events-auto">
-          <Canvas camera={{ position: [0, 0, 10], fov: 35 }}>
-            <color attach="background" args={['#000000']} />
-
-            {/* Cinematic Lighting - High Visibility */}
-            <ambientLight intensity={1.5} color="#8080ff" />
-            <spotLight position={[50, 50, 50]} angle={0.2} penumbra={1} intensity={50} color="#ffffff" />
-            <pointLight position={[-20, 0, -20]} intensity={20} color="#ff3b30" /> {/* Red Rim */}
-            <pointLight position={[20, 10, 20]} intensity={10} color="#40c9ff" /> {/* Cyan Fill */}
-
-            <CameraController />
-
-            <Suspense fallback={null}>
-              <group rotation={[0, 0, 0]}>
-                <EarthScene setRotation={setRotation} />
-                <CrisisMarkers />
-              </group>
-
-              <Stars radius={200} depth={50} count={3000} factor={3} saturation={0} fade speed={0.5} />
-            </Suspense>
-
-            <OrbitControls
-              enableZoom={false}
-              enablePan={false}
-              enableRotate={true}
-              rotateSpeed={0.5}
-              target={[0, 0, 0]}
-            />
-          </Canvas>
-        </div>
-
-        {/* VFX Overlays */}
-        <div className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(circle_at_center,transparent_0%,#000000_100%)] opacity-40"></div>
-        <div className="absolute inset-0 pointer-events-none z-10 bg-[url('/noise.svg')] opacity-10 mix-blend-overlay"></div>
-
-        {/* Boot Flash Effect */}
-        <div className={`absolute inset-0 z-50 pointer-events-none bg-green-500/20 mix-blend-screen transition-opacity duration-500 ${bootFlash ? 'opacity-100' : 'opacity-0'}`}></div>
       </div>
-    </BrowserRouter>
+
+      {/* 3D Scene Layer (Persistent Background) */}
+      <div className="absolute inset-0 z-0 pointer-events-auto">
+        <Canvas camera={{ position: [0, 0, 10], fov: 35 }}>
+          <color attach="background" args={['#000000']} />
+
+          {/* Cinematic Lighting */}
+          <ambientLight intensity={1.5} color="#8080ff" />
+          <spotLight position={[50, 50, 50]} angle={0.2} penumbra={1} intensity={50} color="#ffffff" />
+          <pointLight position={[-20, 0, -20]} intensity={20} color="#ff3b30" />
+          <pointLight position={[20, 10, 20]} intensity={10} color="#40c9ff" />
+
+          <CameraController />
+
+          <Suspense fallback={null}>
+            <group rotation={[0, 0, 0]}>
+              <EarthScene setRotation={setRotation} />
+              <CrisisMarkers />
+            </group>
+            <Stars radius={200} depth={50} count={3000} factor={3} saturation={0} fade speed={0.5} />
+          </Suspense>
+
+          <OrbitControls
+            enableZoom={false}
+            enablePan={false}
+            enableRotate={true}
+            rotateSpeed={0.5}
+            target={[0, 0, 0]}
+          />
+        </Canvas>
+      </div>
+
+      {/* VFX Overlays */}
+      <div className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(circle_at_center,transparent_0%,#000000_100%)] opacity-40"></div>
+      <div className="absolute inset-0 pointer-events-none z-10 bg-[url('/noise.svg')] opacity-10 mix-blend-overlay"></div>
+
+      {/* Boot Flash Effect */}
+      <div className={`absolute inset-0 z-50 pointer-events-none bg-green-500/20 mix-blend-screen transition-opacity duration-500 ${bootFlash ? 'opacity-100' : 'opacity-0'}`}></div>
+    </div>
   );
 };
 
 function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <BrowserRouter>
+        <MainApp />
+      </BrowserRouter>
     </AuthProvider>
   );
 }
