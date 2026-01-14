@@ -14,6 +14,13 @@ from supabase import create_client, Client
 
 # Import AI Service
 from .gemini_service import analyze_crisis_with_llm
+from .twilio_service import send_emergency_sms
+
+# Hardcoded test numbers for Hackathon
+EMERGENCY_CONTACTS = [
+    "+917718883299", # Replace with actual registered Twilio numbers
+    "+91"
+]
 
 from pathlib import Path
 
@@ -146,8 +153,21 @@ async def create_crisis_alert(
     else:
         raise HTTPException(status_code=500, detail="Database not initialized")
 
+    # 4. SMS Alerts to Nearby Contacts
+    for phone in EMERGENCY_CONTACTS:
+        # In a real app, we'd fetch the recipient's last location from DB.
+        # For testing, we assume they are within range if we want to test the trigger.
+        # Or you can hardcode a location to test the logic:
+        recipient_loc = (28.6139, 77.2090) # Example: New Delhi
+        incident_loc = (latitude, longitude)
+        
+        dist = geodesic(recipient_loc, incident_loc).km
+        if dist <= 5:
+            msg = f"🚨 SankatSaathi ALERT: {title} reported near you ({dist:.1f}km). Type: {crisis_type}. Severity: {final_severity}. Stay safe!"
+            send_emergency_sms(phone, msg)
+
     return {
-        "message": "Incident Reported",
+        "message": "Incident Reported & Alerts Sent",
         "incident_id": incident_id,
         "ai_analysis": ai_analysis
     }

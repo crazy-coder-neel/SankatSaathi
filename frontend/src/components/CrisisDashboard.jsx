@@ -25,6 +25,8 @@ const CrisisDashboard = () => {
     const [userLocation, setUserLocation] = useState(null);
     const [selectedIncident, setSelectedIncident] = useState(null);
     const [viewMode, setViewMode] = useState('dashboard'); // 'dashboard', 'report', 'details'
+    const [isBroadcasting, setIsBroadcasting] = useState(false);
+    const [broadcastingUsers, setBroadcastingUsers] = useState([]);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -36,9 +38,10 @@ const CrisisDashboard = () => {
         }
 
         fetchActiveCrises();
+        fetchBroadcastingUsers();
 
-        // --- SUPABASE REALTIME SUBSCRIPTION (Replaces WebSocket) ---
-        const channel = supabase
+        // --- SUPABASE REALTIME SUBSCRIPTION (Incidents) ---
+        const incidentChannel = supabase
             .channel('public:incidents')
             .on(
                 'postgres_changes',
@@ -73,6 +76,18 @@ const CrisisDashboard = () => {
             )
             .subscribe();
 
+        // --- SUPABASE REALTIME SUBSCRIPTION (Broadcasting Users & Agencies) ---
+        const profileChannel = supabase
+            .channel('public:profiles')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'profiles' },
+                () => {
+                    fetchBroadcastingUsers();
+                }
+            )
+            .subscribe();
+
         const handleMessage = (event) => {
             if (event.data === 'incident-reported') {
                 fetchActiveCrises();
@@ -81,10 +96,71 @@ const CrisisDashboard = () => {
         window.addEventListener('message', handleMessage);
 
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(incidentChannel);
+            supabase.removeChannel(profileChannel);
             window.removeEventListener('message', handleMessage);
         };
     }, [userLocation]);
+
+    // Handle SOS Broadcasting
+    useEffect(() => {
+        let watchId = null;
+
+        if (isBroadcasting && user && navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(
+                async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    await supabase
+                        .from('profiles')
+                        .update({
+                            is_broadcasting: true,
+                            last_latitude: latitude,
+                            last_longitude: longitude
+                        })
+                        .eq('id', user.id);
+                },
+                (err) => console.error(err),
+                { enableHighAccuracy: true }
+            );
+        } else if (user) {
+            // Stop broadcasting
+            supabase
+                .from('profiles')
+                .update({ is_broadcasting: false })
+                .eq('id', user.id);
+        }
+
+        return () => {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+        };
+    }, [isBroadcasting, user]);
+
+    const fetchBroadcastingUsers = async () => {
+        // 1. Fetch SOS Users
+        const { data: sosData } = await supabase
+            .from('profiles')
+            .select('id, full_name, last_latitude, last_longitude')
+            .eq('is_broadcasting', true);
+
+        setBroadcastingUsers(sosData?.filter(u => u.id !== user?.id) || []);
+
+        // 2. Fetch Responders/Agencies (Assuming all agencies are "active" for now)
+        const { data: agencyData } = await supabase
+            .from('profiles')
+            .select('id, full_name, role, last_latitude, last_longitude')
+            .eq('role', 'agency');
+
+        // Map to format expected by LiveIncidentMap responders prop
+        const mappedAgencies = agencyData?.map(a => ({
+            id: a.id,
+            name: a.full_name,
+            type: a.role,
+            lat: a.last_latitude,
+            lon: a.last_longitude
+        })).filter(a => a.lat && a.lon) || [];
+
+        setAgencies(mappedAgencies);
+    };
 
     const fetchActiveCrises = async () => {
         try {
@@ -132,8 +208,18 @@ const CrisisDashboard = () => {
                         <LiveIncidentMap
                             incidents={activeCrises}
                             responders={agencies}
+                            broadcastingUsers={broadcastingUsers}
                             userLocation={userLocation}
                         />
+                        <div className="absolute top-4 left-4 z-[400]">
+                            <button
+                                onClick={() => setIsBroadcasting(!isBroadcasting)}
+                                className={`px-4 py-2 rounded-full font-bold shadow-lg transition-all flex items-center gap-2 border-2 ${isBroadcasting ? 'bg-red-600 border-red-400 text-white animate-pulse' : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-red-500 hover:text-red-500'}`}
+                            >
+                                <Volume2 size={18} />
+                                {isBroadcasting ? 'BROADCASTING SOS' : 'BROADCAST SOS'}
+                            </button>
+                        </div>
                         <div className="absolute top-4 right-4 z-[400] bg-black/80 backdrop-blur-md px-3 py-1 rounded border border-white/10 text-[10px] text-cyan-400 font-mono uppercase">
                             Satellite Link: Active
                         </div>
@@ -221,23 +307,21 @@ const CrisisDashboard = () => {
                         </>
                     ) : viewMode === 'report' ? (
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                <IncidentReport onSuccess={async (newId) => {
-                                    // Refresh data
-                                    const apiUrl = import.meta.env.VITE_API_URL || '/api';
-                                    const res = await fetch(`${apiUrl}/crisis/active`);
-                                    const data = await res.json();
-                                    const freshList = data.crises || [];
-                                    setActiveCrises(freshList);
+                            <IncidentReport onSuccess={async (newId) => {
+                                // Refresh data
+                                const apiUrl = import.meta.env.VITE_API_URL || '/api';
+                                const res = await fetch(`${apiUrl}/crisis/active`);
+                                const data = await res.json();
+                                const freshList = data.crises || [];
+                                setActiveCrises(freshList);
 
-                                    // Select new incident
-                                    if (newId) {
-                                        const match = freshList.find(i => i.id === newId);
-                                        if (match) setSelectedIncident(match);
-                                    }
-                                    setViewMode('details');
-                                }} />
-                            </div>
+                                // Select new incident
+                                if (newId) {
+                                    const match = freshList.find(i => i.id === newId);
+                                    if (match) setSelectedIncident(match);
+                                }
+                                setViewMode('details');
+                            }} />
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4">

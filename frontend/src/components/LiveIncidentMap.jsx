@@ -35,6 +35,15 @@ const responderIcon = new L.Icon({
     shadowSize: [41, 41]
 });
 
+const broadcastingUserIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
 const RecenterMap = ({ lat, lon }) => {
     const map = useMap();
     useEffect(() => {
@@ -43,7 +52,7 @@ const RecenterMap = ({ lat, lon }) => {
     return null;
 };
 
-const LiveIncidentMap = ({ incidents, responders, userLocation }) => {
+const LiveIncidentMap = ({ incidents, responders, broadcastingUsers, userLocation }) => {
     // Default center (New Delhi)
     const center = userLocation ? [userLocation.latitude, userLocation.longitude] : [28.6139, 77.2090];
 
@@ -93,6 +102,22 @@ const LiveIncidentMap = ({ incidents, responders, userLocation }) => {
                             <div className="text-gray-900">
                                 <h3 className="font-bold text-green-600">{resp.name}</h3>
                                 <p className="text-sm uppercase">{resp.type}</p>
+                            </div>
+                        </Popup>
+                    </Marker>
+                ))}
+
+                {/* Broadcasting Users (SOS) */}
+                {broadcastingUsers && broadcastingUsers.map(u => (
+                    <Marker
+                        key={u.id}
+                        position={[u.last_latitude, u.last_longitude]}
+                        icon={broadcastingUserIcon}
+                    >
+                        <Popup>
+                            <div className="text-gray-900">
+                                <h3 className="font-bold text-yellow-600">🆘 SOS: {u.full_name}</h3>
+                                <p className="text-xs">Location shared in real-time</p>
                             </div>
                         </Popup>
                     </Marker>

@@ -5,6 +5,7 @@ import { Shield, Zap, Lock, Globe, Activity, ArrowRight } from 'lucide-react';
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
     const [isLogin, setIsLogin] = useState(true);
     const { signIn, signUp } = useAuth();
     const [error, setError] = useState(null);
@@ -18,7 +19,10 @@ const Login = () => {
             if (isLogin) {
                 await signIn(email, password);
             } else {
-                await signUp(email, password);
+                if (!fullName.trim()) {
+                    throw new Error("Full Name is required for registration.");
+                }
+                await signUp(email, password, fullName);
             }
         } catch (error) {
             setError(error.message);
@@ -107,6 +111,19 @@ const Login = () => {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {!isLogin && (
+                            <div className="space-y-2 animate-fade-in">
+                                <label className="text-xs font-mono uppercase text-gray-500 ml-1">Full Name</label>
+                                <input
+                                    type="text"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-crisis-red/50 transition-colors font-mono"
+                                    placeholder="John Doe"
+                                    required
+                                />
+                            </div>
+                        )}
                         <div className="space-y-2">
                             <label className="text-xs font-mono uppercase text-gray-500 ml-1">Identity ID (Email)</label>
                             <input

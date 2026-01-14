@@ -9,21 +9,25 @@ const IncidentChat = ({ incidentId }) => {
     const [roomId, setRoomId] = useState(null);
     const messagesEndRef = useRef(null);
 
+    const [isActive, setIsActive] = useState(true);
+
     useEffect(() => {
         if (!incidentId || !user) return;
 
-        // 1. Get Room ID
+        // 1. Get Room ID and Status
         const fetchRoom = async () => {
             const { data, error } = await supabase
                 .from('incident_rooms')
-                .select('id')
+                .select('id, is_active')
                 .eq('incident_id', incidentId)
                 .single();
 
             if (data) {
                 setRoomId(data.id);
+                setIsActive(data.is_active);
                 fetchMessages(data.id);
                 subscribeToMessages(data.id);
+                subscribeToRoomStatus(data.id);
             }
         };
 
@@ -33,6 +37,19 @@ const IncidentChat = ({ incidentId }) => {
             supabase.removeAllChannels();
         };
     }, [incidentId, user]);
+
+    const subscribeToRoomStatus = (roomId) => {
+        supabase
+            .channel(`room_status:${roomId}`)
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'incident_rooms', filter: `id=eq.${roomId}` },
+                (payload) => {
+                    setIsActive(payload.new.is_active);
+                }
+            )
+            .subscribe();
+    };
 
     const fetchMessages = async (roomId) => {
         const { data } = await supabase
@@ -152,21 +169,29 @@ const IncidentChat = ({ incidentId }) => {
                         </div>
                     );
                 })}
+                {!isActive && (
+                    <div className="flex justify-center my-4">
+                        <div className="bg-gray-800 border border-gray-600 px-4 py-2 rounded-full text-gray-400 text-xs font-bold uppercase tracking-widest">
+                            Chat Session Closed
+                        </div>
+                    </div>
+                )}
                 <div ref={messagesEndRef} />
             </div>
 
             <form onSubmit={handleSend} className="p-3 bg-gray-800 flex gap-2">
                 <input
                     type="text"
+                    disabled={!isActive}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                    placeholder={isActive ? "Type a message..." : "Chat session is closed"}
+                    className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <button
                     type="submit"
-                    disabled={!roomId}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold disabled:opacity-50"
+                    disabled={!roomId || !isActive}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Send
                 </button>

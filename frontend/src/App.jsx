@@ -127,9 +127,9 @@ const MainApp = () => {
         <div className="pointer-events-auto min-h-full">
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/landing" replace />} />
             <Route path="/landing" element={<LandingPage onSystemInitialize={() => setIsSystemOnline(true)} />} />
-            <Route path="/login" element={user ? <Navigate to="/intelligence" /> : <Login />} />
+            <Route path="/login" element={user ? <Navigate to="/landing" /> : <Login />} />
 
             {/* Protected Routes */}
             <Route path="/intelligence" element={

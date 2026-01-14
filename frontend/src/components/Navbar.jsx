@@ -1,15 +1,21 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { ShieldAlert, Activity, Users, ChevronDown, UserCircle } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = ({ isSystemOnline }) => {
     const { user, profile, signOut } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
 
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+
+    const handleLogout = async () => {
+        await signOut();
+        navigate('/login');
+    };
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 h-auto lg:h-[80px] bg-gradient-to-b from-black/80 to-transparent pointer-events-none flex flex-col">
@@ -127,7 +133,7 @@ const Navbar = ({ isSystemOnline }) => {
                         </div>
 
                         <button
-                            onClick={signOut}
+                            onClick={handleLogout}
                             className="ml-4 px-3 py-1 border border-crisis-red/30 bg-crisis-red/10 text-crisis-red text-[10px] font-bold uppercase hover:bg-crisis-red hover:text-white transition-all duration-300 rounded-sm"
                         >
                             Logout
@@ -159,7 +165,7 @@ const Navbar = ({ isSystemOnline }) => {
                         <div className="h-[1px] bg-white/10 my-2"></div>
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-400">User: {profile?.full_name || 'Agni'}</span>
-                            <button onClick={signOut} className="text-red-500 text-sm font-bold uppercase">Logout</button>
+                            <button onClick={handleLogout} className="text-red-500 text-sm font-bold uppercase">Logout</button>
                         </div>
                     </div>
                 </div>
