@@ -98,15 +98,17 @@ const Login = () => {
 
                     <div className="mb-10 text-center">
                         <h3 className="text-2xl font-bold mb-2 text-white">System Access</h3>
-                        <div className="flex justify-center gap-1">
-                            <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse"></div>
-                            <p className="text-xs text-green-500 font-mono tracking-widest uppercase">Secure Connection Established</p>
+                        <div className="flex justify-center items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full animate-pulse ${import.meta.env.VITE_SUPABASE_URL ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <p className={`text-[10px] font-mono tracking-widest uppercase ${import.meta.env.VITE_SUPABASE_URL ? 'text-green-500' : 'text-red-500'}`}>
+                                {import.meta.env.VITE_SUPABASE_URL ? 'Secure Connection: ACTIVE' : 'Connection: OFFLINE'}
+                            </p>
                         </div>
                     </div>
 
                     {error && (
                         <div className="mb-6 p-4 rounded bg-red-500/10 border border-red-500/20 text-red-200 text-sm flex items-center gap-2">
-                            <Shield className="w-4 h-4" /> {error}
+                            {error}
                         </div>
                     )}
 
@@ -119,25 +121,25 @@ const Login = () => {
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
                                     className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-crisis-red/50 transition-colors font-mono"
-                                    placeholder="John Doe"
+                                    placeholder="Enter your name"
                                     required
                                 />
                             </div>
                         )}
                         <div className="space-y-2">
-                            <label className="text-xs font-mono uppercase text-gray-500 ml-1">Identity ID (Email)</label>
+                            <label className="text-xs font-mono uppercase text-gray-500 ml-1">Email Address</label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-crisis-red/50 transition-colors font-mono"
-                                placeholder="operative@agency.org"
+                                placeholder="name@email.com"
                                 required
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-mono uppercase text-gray-500 ml-1">Access Key (Password)</label>
+                            <label className="text-xs font-mono uppercase text-gray-500 ml-1">Password</label>
                             <input
                                 type="password"
                                 value={password}

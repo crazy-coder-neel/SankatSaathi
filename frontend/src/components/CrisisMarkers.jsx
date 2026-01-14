@@ -53,11 +53,12 @@ export const CrisisMarkers = () => {
 
     React.useEffect(() => {
         const fetchMarkers = async () => {
-            const apiUrl = import.meta.env.VITE_API_URL || '/api';
+            const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, "");
             console.log(`Fetching markers from: ${apiUrl}/crisis/active`);
 
             try {
-                const res = await fetch(`${apiUrl}/crisis/active`);
+                const url = `${apiUrl.startsWith('http') ? apiUrl : '/' + apiUrl.replace(/^\//, '')}/crisis/active`;
+                const res = await fetch(url);
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
                 const data = await res.json();

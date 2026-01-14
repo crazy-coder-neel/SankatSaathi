@@ -164,8 +164,8 @@ const CrisisDashboard = () => {
 
     const fetchActiveCrises = async () => {
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || '/api';
-            const res = await fetch(`${apiUrl}/crisis/active`);
+            const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, "");
+            const res = await fetch(`${apiUrl.startsWith('http') ? apiUrl : '/' + apiUrl.replace(/^\//, '')}/crisis/active`);
             const data = await res.json();
             setActiveCrises(data.crises || []);
         } catch (e) {
@@ -176,11 +176,12 @@ const CrisisDashboard = () => {
     const handleAccept = async (incidentId) => {
         if (!user) return;
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || '/api';
+            const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, "");
             const formData = new FormData();
             formData.append('responder_id', user.id);
 
-            const res = await fetch(`${apiUrl}/crisis/${incidentId}/accept`, {
+            const url = `${apiUrl.startsWith('http') ? apiUrl : '/' + apiUrl.replace(/^\//, '')}/crisis/${incidentId}/accept`;
+            const res = await fetch(url, {
                 method: 'POST',
                 body: formData
             });
