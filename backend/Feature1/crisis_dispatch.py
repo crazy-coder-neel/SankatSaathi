@@ -13,12 +13,12 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 
 # Import AI Service
-from gemini_service import analyze_crisis_with_llm
+from .gemini_service import analyze_crisis_with_llm
 
 from pathlib import Path
 
 # Force load from backend directory
-env_path = Path(__file__).parent / '.env'
+env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # Supabase Client Setup

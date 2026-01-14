@@ -10,6 +10,13 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Guard: If supabase client failed to init (missing env vars), stop here.
+        if (!supabase) {
+            console.error("AuthContext: Supabase client is null. Auth disabled.");
+            setLoading(false);
+            return;
+        }
+
         // 1. Get Session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null);
@@ -52,11 +59,13 @@ export const AuthProvider = ({ children }) => {
     };
 
     const login = async (email, password) => {
+        if (!supabase) throw new Error("Supabase not configured");
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
     };
 
     const signUp = async (email, password, fullName, role = 'user') => {
+        if (!supabase) throw new Error("Supabase not configured");
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -72,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const signOut = async () => {
+        if (!supabase) return;
         await supabase.auth.signOut();
         setUser(null);
         setProfile(null);
