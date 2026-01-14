@@ -1,5 +1,17 @@
 {
     "version": 2,
+    "env": {
+        "GEMINI_API_KEY": "AIzaSyALkD2_ii0EH8UTa9O0xBpW62FM_BYhKOM",
+        "SUPABASE_URL": "https://wmjqgcgamnbbqkbooovb.supabase.co",
+        "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtanFnY2dhbW5iYnFrYm9vb3ZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzQzNjEsImV4cCI6MjA4MzYxMDM2MX0.jqAvXPCbey3E7cqVczpghgdus44WaqBJbJLovtdHpGo"
+    },
+    "build": {
+        "env": {
+            "VITE_SUPABASE_URL": "https://wmjqgcgamnbbqkbooovb.supabase.co",
+            "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtanFnY2dhbW5iYnFrYm9vb3ZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMzQzNjEsImV4cCI6MjA4MzYxMDM2MX0.jqAvXPCbey3E7cqVczpghgdus44WaqBJbJLovtdHpGo",
+            "VITE_API_URL": "/api"
+        }
+    },
     "builds": [
         {
             "src": "frontend/package.json",
@@ -23,16 +35,18 @@
             "dest": "/frontend/assets/$1"
         },
         {
-            "src": "/(.*\\.(css|png|jpg|jpeg|webp|svg|json|ico|js))",
+            "src": "/(.*\\.(css|png|jpg|jpeg|webp|svg|json|ico|js|mp3))",
             "dest": "/frontend/$1"
         },
         {
             "src": "/",
             "status": 308,
-            "headers": { "Location": "/login" }
+            "headers": {
+                "Location": "/login"
+            }
         },
         {
-            "src": "/(.*)",
+            "src": "/((?!api).*)",
             "dest": "/frontend/index.html"
         }
     ]

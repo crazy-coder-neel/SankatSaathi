@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Activity, Volume2 } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import LiveIncidentMap from './LiveIncidentMap';
 import IncidentChat from './IncidentChat';
 import IncidentReport from './IncidentReport';
-import { Volume2, Bell, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Activity, Volume2, Bell, CheckCircle } from 'lucide-react';
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // km
@@ -37,36 +37,42 @@ const CrisisDashboard = () => {
 
         fetchActiveCrises();
 
-        const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
-        const ws = new WebSocket(`${wsUrl}/crisis/ws/dashboard`);
-        ws.onopen = () => console.log('Connected to Crisis Dispatch');
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'INITIAL_STATE') {
-                setActiveCrises(data.active_crises);
-                setAgencies(data.agencies);
-            } else if (data.type === 'NEW_CRISIS') {
-                setActiveCrises(prev => [...prev, data.crisis]);
+        // --- SUPABASE REALTIME SUBSCRIPTION (Replaces WebSocket) ---
+        const channel = supabase
+            .channel('public:incidents')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'incidents' },
+                (payload) => {
+                    const newIncident = payload.new;
+                    setActiveCrises(prev => {
+                        if (prev.find(i => i.id === newIncident.id)) return prev;
+                        return [...prev, newIncident];
+                    });
 
-                // Proximity Alert
-                if (userLocation) {
-                    const dist = calculateDistance(
-                        userLocation.latitude,
-                        userLocation.longitude,
-                        data.crisis.latitude,
-                        data.crisis.longitude
-                    );
-                    if (dist <= 5) {
-                        new Audio('/alert.mp3').play().catch(() => { });
-                        alert(`🚨 PROXIMITY ALERT: ${data.crisis.title} reported within ${dist.toFixed(1)}km!`);
+                    if (userLocation) {
+                        const dist = calculateDistance(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            newIncident.latitude,
+                            newIncident.longitude
+                        );
+                        if (dist <= 5) {
+                            new Audio('/alert.mp3').play().catch(() => { });
+                            alert(`🚨 PROXIMITY ALERT: ${newIncident.title} reported within ${dist.toFixed(1)}km!`);
+                        }
                     }
                 }
-            } else if (data.type === 'AGENCY_RESPONSE') {
-                setActiveCrises(prev => prev.map(c => c.id === data.crisis_id ? data.crisis : c));
-            }
-        };
+            )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'incidents' },
+                (payload) => {
+                    setActiveCrises(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
+                }
+            )
+            .subscribe();
 
-        // Listen for internal updates from components
         const handleMessage = (event) => {
             if (event.data === 'incident-reported') {
                 fetchActiveCrises();
@@ -75,14 +81,14 @@ const CrisisDashboard = () => {
         window.addEventListener('message', handleMessage);
 
         return () => {
-            ws.close();
+            supabase.removeChannel(channel);
             window.removeEventListener('message', handleMessage);
         };
-    }, []);
+    }, [userLocation]);
 
     const fetchActiveCrises = async () => {
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const apiUrl = import.meta.env.VITE_API_URL || '/api';
             const res = await fetch(`${apiUrl}/crisis/active`);
             const data = await res.json();
             setActiveCrises(data.crises || []);
@@ -94,7 +100,7 @@ const CrisisDashboard = () => {
     const handleAccept = async (incidentId) => {
         if (!user) return;
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const apiUrl = import.meta.env.VITE_API_URL || '/api';
             const formData = new FormData();
             formData.append('responder_id', user.id);
 
@@ -218,7 +224,7 @@ const CrisisDashboard = () => {
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 <IncidentReport onSuccess={async (newId) => {
                                     // Refresh data
-                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                                    const apiUrl = import.meta.env.VITE_API_URL || '/api';
                                     const res = await fetch(`${apiUrl}/crisis/active`);
                                     const data = await res.json();
                                     const freshList = data.crises || [];

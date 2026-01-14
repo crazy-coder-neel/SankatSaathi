@@ -57,20 +57,9 @@ class AgencyResponse(BaseModel):
     capacity: int
     accepts: bool
 
-# --- WebSocket Managers ---
-# We keep WebSockets for LIVE location updates, but persistence is in DB.
-connected_agencies: Dict[str, WebSocket] = {}
-connected_dashboards: List[WebSocket] = []
-
-async def broadcast_to_dashboards(message: dict):
-    to_remove = []
-    for ws in connected_dashboards:
-        try:
-            await ws.send_json(message)
-        except:
-            to_remove.append(ws)
-    for ws in to_remove:
-        connected_dashboards.remove(ws)
+# --- Realtime Management ---
+# Persistence is handled via Supabase direct.
+# WebSockets removed for Vercel Serverless compatibility.
 
 # --- Helper Functions ---
 
@@ -145,7 +134,6 @@ async def create_crisis_alert(
         "ai_analysis": ai_analysis,
         "reporter_id": reporter_id 
     }
-    
     incident_id = None
     if supabase:
         try:
@@ -153,48 +141,10 @@ async def create_crisis_alert(
             if data.data:
                 incident_id = data.data[0]["id"]
         except Exception as e:
-            import traceback
-            # Log full error for debugging
-            try:
-                with open("server_error.log", "a") as logtable:
-                    logtable.write(f"\n[{datetime.now()}] ERROR:\n")
-                    logtable.write(traceback.format_exc())
-            except: 
-                pass 
-            
-            # --- AUTO-HEAL: Handle Missing Profile (Ghost User) ---
-            err_str = str(e)
-            if '23503' in err_str and 'profiles' in err_str and reporter_id:
-                print(f"DEBUG: Missing profile detected for {reporter_id}. Attempting auto-restore...")
-                try:
-                    # 1. Create the missing profile
-                    supabase.table("profiles").insert({
-                        "id": reporter_id,
-                        "full_name": "Restored User",
-                        "role": "user"
-                    }).execute()
-                    print("DEBUG: Profile restored successfully.")
-
-                    # 2. Retry the Incident Insert
-                    data = supabase.table("incidents").insert(new_incident).execute()
-                    if data.data:
-                        incident_id = data.data[0]["id"]
-                    
-                except Exception as retry_err:
-                    print(f"DEBUG: Auto-heal failed: {retry_err}")
-                    # Raise original error if fix fails
-                    raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
-            else:
-                print(f"DB Insert Failed: {e}")
-                raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
+            print(f"DB Insert Failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
     else:
-        raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
-    # 4. Notify (WebSockets)
-    await broadcast_to_dashboards({
-        "type": "NEW_CRISIS",
-        "crisis": {**new_incident, "id": incident_id}
-    })
+        raise HTTPException(status_code=500, detail="Database not initialized")
 
     return {
         "message": "Incident Reported",
@@ -284,35 +234,3 @@ async def accept_incident(incident_id: str, responder_id: str = Form(...)):
         raise HTTPException(500, str(e))
 
 
-@router.websocket("/ws/dashboard")
-async def dashboard_websocket(websocket: WebSocket):
-    await websocket.accept()
-    connected_dashboards.append(websocket)
-    try:
-        while True:
-            await websocket.receive_text()
-    except:
-        if websocket in connected_dashboards:
-            connected_dashboards.remove(websocket)
-
-@router.websocket("/ws/incident/{incident_id}")
-async def incident_websocket(websocket: WebSocket, incident_id: str):
-    """
-    Dedicated WS for a specific incident's chat/updates?
-    Actually, we'll use Supabase Realtime for Chat.
-    This WS can be for 'Live Location Tracking' of volunteers.
-    """
-    await websocket.accept()
-    # Logic for location broadcasting...
-    try:
-        while True:
-            data = await websocket.receive_json()
-            # If volunteer sends location, broadcast to everyone watching this incident
-            if data.get("type") == "LOCATION_UPDATE":
-                await broadcast_to_dashboards({
-                    "type": "VOLUNTEER_LOC",
-                    "incident_id": incident_id,
-                    "data": data
-                })
-    except:
-        pass
