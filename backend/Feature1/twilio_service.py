@@ -15,8 +15,10 @@ def send_emergency_sms(to_number: str, message_body: str):
     """
     Sends an emergency SMS alert using Twilio.
     """
+    print(f"DEBUG: Attempting to send SMS to {to_number}...")
+    
     if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER]):
-        print("ERROR: Twilio credentials missing from environment.")
+        print(f"ERROR: Twilio credentials missing! SID: {bool(TWILIO_ACCOUNT_SID)}, Token: {bool(TWILIO_AUTH_TOKEN)}, From: {bool(TWILIO_PHONE_NUMBER)}")
         return False
 
     try:
@@ -26,8 +28,8 @@ def send_emergency_sms(to_number: str, message_body: str):
             from_=TWILIO_PHONE_NUMBER,
             to=to_number
         )
-        print(f"SMS sent successfully to {to_number}: {message.sid}")
+        print(f"SUCCESS: SMS sent to {to_number}. SID: {message.sid}")
         return True
     except Exception as e:
-        print(f"Failed to send SMS to {to_number}: {e}")
+        print(f"FAILURE: Twilio error sending to {to_number}: {e}")
         return False

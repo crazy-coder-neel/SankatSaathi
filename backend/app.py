@@ -1,13 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
 from pathlib import Path
 
-# Add the current directory to sys.path to ensure imports work in Vercel
-current_dir = Path(__file__).parent.resolve()
-if str(current_dir) not in sys.path:
-    sys.path.append(str(current_dir))
+# Add the backend directory to sys.path to ensure imports work in Vercel
+# We use parent of app.py (which is backend/)
+backend_dir = Path(__file__).parent.resolve()
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
 # Import routers
 from Feature1.crisis_dispatch import router as crisis_router
@@ -17,60 +18,52 @@ app = FastAPI(
     title="CrisisNet Dispatch API",
     description="AI-Powered Crisis Response & Coordination System",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
+# --- ROUTING FIX ---
+# To handle local (/api/...) and Vercel variations, we include the router twice.
+# 1. For local and Vercel (if paths are absolute from root)
+app.include_router(crisis_router, prefix="/api")
+# 2. Fallback (if Vercel or proxy strips the /api prefix)
 app.include_router(crisis_router)
 
-# Health check endpoint
+# Health & Debug Endpoints
 @app.get("/")
-async def root():
+@app.get("/api")
+async def root(request: Request):
     return {
         "message": "🚨 CrisisNet Dispatch API",
         "status": "operational",
-        "version": "1.0.0",
+        "path_received": request.url.path,
         "endpoints": {
-            "crisis": "/crisis",
-            "docs": "/docs",
-            "websocket": "/crisis/ws/dashboard"
+            "crisis": "/api/crisis",
+            "test_sms": "/api/crisis/test-sms",
+            "debug": "/api/debug"
         }
     }
 
-@app.get("/health")
-async def health_check():
+@app.get("/api/debug")
+async def debug_info(request: Request):
     return {
-        "status": "healthy",
-        "timestamp": "2024-01-15T10:00:00Z",
-        "service": "crisis-dispatch"
+        "path": request.url.path,
+        "method": request.method,
+        "env_keys": {
+            "SUPABASE": bool(os.getenv("SUPABASE_URL")),
+            "TWILIO": bool(os.getenv("TWILIO_ACCOUNT_SID")),
+            "GOOGLE": bool(os.getenv("GEMINI_API_KEY"))
+        },
+        "sys_path": sys.path[:5]
     }
 
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    print("CrisisNet Dispatch API starting up...")
-    print("WebSocket endpoints active:")
-    print("   - /crisis/ws/dashboard (Dashboard updates)")
-    print("   - /crisis/ws/agency/{agency_id} (Agency connections)")
-    print("")
-    print("REST API available at: http://localhost:8000")
-    print("API Documentation: http://localhost:8000/docs")
-
 if __name__ == "__main__":
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

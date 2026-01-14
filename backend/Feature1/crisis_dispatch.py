@@ -14,14 +14,20 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from pathlib import Path
 
-# Add the current directory to sys.path to ensure imports work in Vercel
-current_dir = Path(__file__).parent.resolve()
-if str(current_dir) not in sys.path:
-    sys.path.append(str(current_dir))
+# Add the backend directory to sys.path to ensure imports work in Vercel
+# This is especially important for the top-level app.py and nested modules.
+base_dir = Path(__file__).parent.parent.resolve()
+if str(base_dir) not in sys.path:
+    sys.path.insert(0, str(base_dir))
 
-# Import AI & Twilio Services
-from Feature1.gemini_service import analyze_crisis_with_llm
-from Feature1.twilio_service import send_emergency_sms
+# Import AI & Twilio Services (Relative imports are safer within the same package)
+try:
+    from .gemini_service import analyze_crisis_with_llm
+    from .twilio_service import send_emergency_sms
+except ImportError:
+    # Fallback to absolute if relative fails
+    from Feature1.gemini_service import analyze_crisis_with_llm
+    from Feature1.twilio_service import send_emergency_sms
 
 # Force load from backend directory
 env_path = Path(__file__).parent.parent / '.env'
