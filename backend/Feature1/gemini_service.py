@@ -19,7 +19,7 @@ def analyze_crisis_with_llm(description: str, crisis_type: str, cnn_score: float
         return _mock_ai_response(description)
 
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         prompt = f"""
         You are an AI Crisis Response Coordinator. Analyze the following emergency situation and provide a JSON response.

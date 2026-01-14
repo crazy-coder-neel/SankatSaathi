@@ -4,6 +4,7 @@ import uuid
 import asyncio
 import json
 import os
+import sys
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 from enum import Enum
@@ -11,40 +12,39 @@ import random
 from geopy.distance import geodesic
 from dotenv import load_dotenv
 from supabase import create_client, Client
-
-# Import AI Service
-from .gemini_service import analyze_crisis_with_llm
-from .twilio_service import send_emergency_sms
-
-# Hardcoded test numbers for Hackathon
-EMERGENCY_CONTACTS = [
-    os.getenv("TEST1_MOB_NO")
-]   
-
 from pathlib import Path
+
+# Add the current directory to sys.path to ensure imports work in Vercel
+current_dir = Path(__file__).parent.resolve()
+if str(current_dir) not in sys.path:
+    sys.path.append(str(current_dir))
+
+# Import AI & Twilio Services
+from Feature1.gemini_service import analyze_crisis_with_llm
+from Feature1.twilio_service import send_emergency_sms
 
 # Force load from backend directory
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+# Settings
+EMERGENCY_CONTACTS = [
+    num for num in [os.getenv("TEST1_MOB_NO")] if num
+]
+
 # Supabase Client Setup
 SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY")
 
-print(f"DEBUG: CWD is {os.getcwd()}")
-print(f"DEBUG: SUPABASE_URL found: {bool(SUPABASE_URL)}")
-print(f"DEBUG: SUPABASE_KEY found: {bool(SUPABASE_KEY)}")
-
-# If env vars are missing, we'll warn but not crash immediately (local dev flexibility)
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("DEBUG: Supabase Client Initialized Successfully")
+        print("DEBUG: Supabase Initialized")
     except Exception as e:
-        print(f"DEBUG: Supabase Client Init Failed: {e}")
+        print(f"DEBUG: Supabase Init Failed: {e}")
 else:
-    print("DEBUG: CRITICAL - Supabase Credentials MISSING in backend/.env")
+    print("DEBUG: Supabase Credentials MISSING")
 
 # Create router
 router = APIRouter(prefix="/crisis", tags=["Crisis Dispatch"])
@@ -56,40 +56,27 @@ class CrisisSeverity(str, Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
-class AgencyResponse(BaseModel):
-    agency_id: str
-    agency_name: str
-    eta_minutes: int
-    capacity: int
-    accepts: bool
-
 # --- Realtime Management ---
-# Persistence is handled via Supabase direct.
-# WebSockets removed for Vercel Serverless compatibility.
 async def broadcast_to_dashboards(payload: dict):
-    """Placeholder for legacy realtime broadcasts."""
-    print(f"DEBUG: Broadcast (Legacy): {payload.get('type')}")
+    print(f"DEBUG: Broadcast: {payload.get('type')}")
     pass
 
-# --- Helper Functions ---
-
-def get_db_incident(incident_id: str):
-    if not supabase: return None
-    try:
-        response = supabase.table("incidents").select("*").eq("id", incident_id).execute()
-        if response.data:
-            return response.data[0]
-    except Exception as e:
-        print(f"DB Error: {e}")
-    return None
-
-def find_nearby_agencies_static(lat, lon, radius_km=10):
-    # For Hackathon: We still mock the "Agency Discovery" because agencies might not be "users" in the DB yet.
-    # In a real system, we'd query `profiles` table with lat/long.
-    # We will use the defined AGENCIES list but filter by distance.
-    pass # Reusing logic from create_crisis_alert
-
 # --- Endpoints ---
+
+@router.get("/test-sms")
+async def test_sms_diagnostic():
+    """Diagnostic endpoint to verify Twilio connectivity."""
+    if not EMERGENCY_CONTACTS:
+        return {"status": "error", "message": "No TEST1_MOB_NO found in environment vars."}
+    
+    test_number = EMERGENCY_CONTACTS[0]
+    success = send_emergency_sms(test_number, "🛠️ SankatSaathi diagnostic: Twilio is connected!")
+    
+    return {
+        "status": "success" if success else "failed",
+        "recipient": test_number,
+        "message": "Check your phone or Twilio logs if failed."
+    }
 
 @router.post("/alert")
 async def create_crisis_alert(
@@ -101,170 +88,113 @@ async def create_crisis_alert(
     image: Optional[UploadFile] = File(None),
     reporter_id: Optional[str] = Form(None)
 ):
-    """
-    1. Upload Image to Supabase Storage (if any)
-    2. Analyze with Gemini (Visual + Text)
-    3. Insert into Supabase DB (triggers chat creation)
-    4. Broadcast Alert
-    """
-    
-    # 1. Image Upload
-    image_public_url = None
-    if image and supabase:
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not initialized. Check Vercel/Local env vars.")
+
+    try:
+        # 1. Image Upload
+        image_public_url = None
+        if image:
+            try:
+                file_content = await image.read()
+                file_ext = image.filename.split(".")[-1]
+                file_path = f"incidents/{uuid.uuid4()}.{file_ext}"
+                supabase.storage.from_("incident-images").upload(file_path, file_content)
+                image_public_url = supabase.storage.from_("incident-images").get_public_url(file_path)
+            except Exception as e:
+                print(f"Image Upload Failed: {e}")
+
+        # 2. AI Analysis
+        ai_analysis = {
+            "severity": "critical", 
+            "reasoning": "Standard emergency dispatch protocol.",
+            "resources": ["fire_brigade", "ambulance"]
+        }
+        final_severity = ai_analysis.get("severity", "medium").lower()
+
+        # 3. DB Insert
+        new_incident = {
+            "title": title,
+            "description": description,
+            "type": crisis_type,
+            "latitude": latitude,
+            "longitude": longitude,
+            "severity": final_severity,
+            "status": "pending",
+            "image_url": image_public_url,
+            "ai_analysis": ai_analysis,
+            "reporter_id": reporter_id 
+        }
+        data = supabase.table("incidents").insert(new_incident).execute()
+        incident_id = data.data[0]["id"] if data.data else None
+
+        # 4. SMS Alerts to EMERGENCY_CONTACTS (Direct Test Loop)
+        for phone in EMERGENCY_CONTACTS:
+            # Assume within distance for test numbers to guarantee trigger
+            msg = f"🚨 SankatSaathi ALERT: {title} reported. Type: {crisis_type}. Severity: {final_severity}. Stay safe!"
+            send_emergency_sms(phone, msg)
+
+        # 5. Dynamic SMS to Nearby Users from DB
         try:
-            file_content = await image.read()
-            file_ext = image.filename.split(".")[-1]
-            file_path = f"incidents/{uuid.uuid4()}.{file_ext}"
-            supabase.storage.from_("incident-images").upload(file_path, file_content)
-            image_public_url = supabase.storage.from_("incident-images").get_public_url(file_path)
+            res = supabase.table("profiles").select("phone_number, last_latitude, last_longitude").not_.is_("phone_number", "null").execute()
+            for p in res.data:
+                p_lat, p_lon = p.get("last_latitude"), p.get("last_longitude")
+                if p_lat and p_lon and p.get("phone_number"):
+                    dist = geodesic((p_lat, p_lon), (latitude, longitude)).km
+                    if dist <= 5 and p["phone_number"] not in EMERGENCY_CONTACTS:
+                        msg = f"🚨 SankatSaathi ALERT: {title} reported near you ({dist:.1f}km). Stay safe!"
+                        send_emergency_sms(p["phone_number"], msg)
         except Exception as e:
-            print(f"Image Upload Failed: {e}")
+            print(f"Dynamic SMS Logic Failed: {e}")
 
-    # 2. AI Analysis
-    # cnn_score = 0.9 # Mock
-    # ai_analysis = analyze_crisis_with_llm(description, crisis_type, cnn_score, "fire") 
-    ai_analysis = {
-        "severity": "critical", 
-        "reasoning": "Detected fire and received urgent text.",
-        "resources": ["fire_brigade", "ambulance"]
-    }
-    
-    final_severity = ai_analysis.get("severity", "medium").lower()
+        return {"message": "Incident Reported & Alerts Sent", "incident_id": incident_id}
 
-    # 3. DB Insert
-    new_incident = {
-        "title": title,
-        "description": description,
-        "type": crisis_type,
-        "latitude": latitude,
-        "longitude": longitude,
-        "severity": final_severity,
-        "status": "pending",
-        "image_url": image_public_url,
-        "ai_analysis": ai_analysis,
-        "reporter_id": reporter_id 
-    }
-    incident_id = None
-    if supabase:
-        try:
-            data = supabase.table("incidents").insert(new_incident).execute()
-            if data.data:
-                incident_id = data.data[0]["id"]
-        except Exception as e:
-            print(f"DB Insert Failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
-    else:
-        raise HTTPException(status_code=500, detail="Database not initialized")
-
-    # 4. SMS Alerts to Nearby Users (Dynamic)
-    # This checks EVERY user in the database who has a phone number.
-    # If their CURRENT location (from Broadcast SOS) is within 5km of the incident, they get an SMS.
-    if supabase:
-        try:
-            # Fetch users who have phone numbers and locations
-            res = supabase.table("profiles").select("full_name, phone_number, last_latitude, last_longitude").not_.is_("phone_number", "null").execute()
-            
-            for profile in res.data:
-                p_lat = profile.get("last_latitude")
-                p_lon = profile.get("last_longitude")
-                phone = profile.get("phone_number")
-                
-                if p_lat and p_lon and phone:
-                    recipient_loc = (p_lat, p_lon)
-                    incident_loc = (latitude, longitude)
-                    dist = geodesic(recipient_loc, incident_loc).km
-                    
-                    if dist <= 5:
-                        msg = f"🚨 SankatSaathi ALERT: {title} reported near you ({dist:.1f}km). Type: {crisis_type}. Severity: {final_severity}. Stay safe!"
-                        send_emergency_sms(phone, msg)
-        except Exception as e:
-            print(f"SMS Dispatch Error: {e}")
-
-    return {
-        "message": "Incident Reported & Alerts Sent",
-        "incident_id": incident_id,
-        "ai_analysis": ai_analysis
-    }
+    except Exception as e:
+        print(f"ERROR in /alert: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}")
 
 @router.get("/active")
 async def get_active_crises():
     if not supabase:
-        return {"crises": []}
+        raise HTTPException(status_code=500, detail="Supabase not initialized. Check Vercel Env Vars.")
     
     try:
-        # Fetch active incidents
         response = supabase.table("incidents").select("*").neq("status", "closed").execute()
         return {"crises": response.data}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"ERROR in /active: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Fetch Error: {str(e)}")
 
 @router.get("/{incident_id}")
 async def get_incident_detail(incident_id: str):
-    if not supabase: return {}
-    
-    # Get Incident
-    inc_res = supabase.table("incidents").select("*, profiles(full_name, phone_number)").eq("id", incident_id).execute()
-    if not inc_res.data:
-        raise HTTPException(404, "Incident not found")
+    if not supabase: raise HTTPException(500, "Supabase missing")
+    try:
+        inc_res = supabase.table("incidents").select("*, profiles(full_name, phone_number)").eq("id", incident_id).execute()
+        if not inc_res.data: raise HTTPException(404, "Not found")
         
-    incident = inc_res.data[0]
-    
-    # Get Chat Messages (Just last 50)
-    # Note: Client can also subscribe via Supabase Realtime
-    room_res = supabase.table("incident_rooms").select("id").eq("incident_id", incident_id).execute()
-    messages = []
-    if room_res.data:
-        room_id = room_res.data[0]["id"]
-        msg_res = supabase.table("incident_messages").select("*, profiles(full_name)").eq("room_id", room_id).order("created_at", desc=False).execute()
-        messages = msg_res.data
+        incident = inc_res.data[0]
+        room_res = supabase.table("incident_rooms").select("id").eq("incident_id", incident_id).execute()
+        messages = []
+        if room_res.data:
+            room_id = room_res.data[0]["id"]
+            msg_res = supabase.table("incident_messages").select("*, profiles(full_name)").eq("room_id", room_id).order("created_at", desc=False).execute()
+            messages = msg_res.data
+        return {"incident": incident, "messages": messages}
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
-    return {"incident": incident, "messages": messages}
-    
 @router.post("/{incident_id}/accept")
 async def accept_incident(incident_id: str, responder_id: str = Form(...)):
-    if not supabase:
-        raise HTTPException(500, "Supabase not initialized")
-        
+    if not supabase: raise HTTPException(500, "Supabase missing")
     try:
-        # 1. Update Incident
-        # We set status to 'dispatched' and record the responder
-        res = supabase.table("incidents").update({
-            "status": "dispatched",
-            "responder_id": responder_id
-        }).eq("id", incident_id).execute()
-        
-        if not res.data:
-            raise HTTPException(404, "Incident not found")
-            
+        res = supabase.table("incidents").update({"status": "dispatched", "responder_id": responder_id}).eq("id", incident_id).execute()
         updated_incident = res.data[0]
-        
-        # 2. Add System Message to Chat
-        # Get Room ID
         room_res = supabase.table("incident_rooms").select("id").eq("incident_id", incident_id).execute()
         if room_res.data:
             room_id = room_res.data[0]["id"]
-            
-            # Get Responder Name
             prof_res = supabase.table("profiles").select("full_name").eq("id", responder_id).execute()
             name = prof_res.data[0]["full_name"] if prof_res.data else "A responder"
-            
-            supabase.table("incident_messages").insert({
-                "room_id": room_id,
-                "sender_id": responder_id,
-                "content": f"🚨 {name} has accepted this incident and is en route."
-            }).execute()
-            
-        # 3. Broadcast update to dashboards
-        await broadcast_to_dashboards({
-            "type": "AGENCY_RESPONSE",
-            "crisis_id": incident_id,
-            "crisis": updated_incident
-        })
-        
-        return {"message": "Incident accepted", "incident": updated_incident}
-        
+            supabase.table("incident_messages").insert({"room_id": room_id, "sender_id": responder_id, "content": f"🚨 {name} has accepted this incident."}).execute()
+        return {"message": "Accepted", "incident": updated_incident}
     except Exception as e:
-        print(f"Accept Error: {e}")
         raise HTTPException(500, str(e))
-
-
