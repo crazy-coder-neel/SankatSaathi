@@ -1,6 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+import sys
+import os
+from pathlib import Path
+
+# Add the current directory to sys.path to ensure imports work in Vercel
+current_dir = Path(__file__).parent.resolve()
+if str(current_dir) not in sys.path:
+    sys.path.append(str(current_dir))
 
 # Import routers
 from Feature1.crisis_dispatch import router as crisis_router
