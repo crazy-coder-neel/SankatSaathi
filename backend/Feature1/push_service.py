@@ -12,6 +12,8 @@ VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY")
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
 VAPID_MAILTO = os.getenv("VAPID_MAILTO", "mailto:admin@sankatsaathi.com")
 
+print(f"DEBUG: VAPID Status: PUB={bool(VAPID_PUBLIC_KEY)}, PRIV={bool(VAPID_PRIVATE_KEY)}, MAIL={bool(VAPID_MAILTO)}")
+
 def send_web_push(subscription_info, data):
     """
     Sends a web push notification.

@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
 
-const Navbar = ({ isSystemOnline }) => {
+const Navbar = ({ isSystemOnline, onTestPush }) => {
     const { user, profile, signOut } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
@@ -31,6 +31,12 @@ const Navbar = ({ isSystemOnline }) => {
                 </div>
 
                 <div className="flex items-center gap-6">
+                    <button
+                        onClick={onTestPush}
+                        className="text-[10px] font-mono text-crisis-cyan border border-crisis-cyan/30 px-2 py-0.5 hover:bg-crisis-cyan/10 transition-colors uppercase"
+                    >
+                        Test Push
+                    </button>
                     <div className="flex items-center gap-2">
                         <span className={`w-1.5 h-1.5 rounded-full ${isSystemOnline ? 'bg-green-500 animate-none' : 'bg-red-500 animate-pulse'}`}></span>
                         <span className={`text-[10px] font-mono ${isSystemOnline ? 'text-green-500' : 'text-red-500'}`}>

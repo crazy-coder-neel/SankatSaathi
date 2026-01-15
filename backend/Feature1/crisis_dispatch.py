@@ -140,9 +140,12 @@ async def create_crisis_alert(
 
         # 4. Notify Nearby Users via Web Push
         try:
-            # Fetch subscriptions and user locations
-            # Join with profiles to get last locations
-            print(f"DEBUG: Found {len(res.data)} total push subscriptions.")
+            # Fetch subscriptions and user locations joined with profiles
+            res = supabase.table("push_subscriptions").select("subscription, user_id, profiles(last_latitude, last_longitude)").execute()
+            print(f"DEBUG: Found {len(res.data)} total push subscriptions in DB.")
+            
+            if len(res.data) > 0:
+                print(f"DEBUG: First subscription sample: {json.dumps(res.data[0].get('subscription'))[:100]}...")
             
             payload = {
                 "title": f"🚨 EMERGENCY: {title}",
@@ -156,30 +159,54 @@ async def create_crisis_alert(
 
             notification_count = 0
             for row in res.data:
+                u_id = row.get("user_id")
                 profile = row.get("profiles")
+                
                 if not profile:
-                    print(f"DEBUG: No profile found for sub user_id: {row.get('user_id')}")
+                    print(f"DEBUG: Skipping User {u_id} - NO PROFILE FOUND (Join failed).")
                     continue
                 
                 p_lat, p_lon = profile.get("last_latitude"), profile.get("last_longitude")
                 if p_lat is not None and p_lon is not None:
                     dist = geodesic((p_lat, p_lon), (latitude, longitude)).km
-                    print(f"DEBUG: User {row.get('user_id')} distance: {dist:.2f}km")
+                    print(f"DEBUG: User {u_id} found at {dist:.2f}km radius.")
+                    
                     if dist <= RADIUS_KM:
+                        print(f"DEBUG: -> Sending Push to User {u_id}...")
                         success = send_web_push(row["subscription"], payload)
-                        if success: notification_count += 1
+                        if success: 
+                            notification_count += 1
+                            print(f"DEBUG: -> Push SENT to User {u_id}")
+                        else:
+                            print(f"DEBUG: -> Push FAILED for User {u_id}")
+                    else:
+                        print(f"DEBUG: -> User {u_id} TOO FAR ({dist:.2f}km > {RADIUS_KM}km)")
                 else:
-                    print(f"DEBUG: User {row.get('user_id')} has NO location synced.")
+                    print(f"DEBUG: Skipping User {u_id} - NO LOCATION SYNCED (Lat/Lon is None).")
             
-            print(f"DEBUG: Notifications triggered for {notification_count} users.")
+            print(f"DEBUG: Summary: {notification_count} notifications pushed successfully.")
         except Exception as e:
             print(f"Push Notification Logic Failed: {e}")
 
-        return {"message": "Incident Reported & Alerts Sent", "incident_id": incident_id}
+        return {"message": "Incident Reported & Alerts Sent", "incident_id": incident_id, "notifications_sent": notification_count}
 
     except Exception as e:
         print(f"ERROR in /alert: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}")
+
+@router.get("/debug-sync")
+async def debug_sync_status():
+    """Diagnostic endpoint to check user sync status."""
+    if not supabase: return {"error": "Supabase missing"}
+    try:
+        # We use a broad select to see what's happening
+        subs = supabase.table("push_subscriptions").select("user_id, subscription, profiles(last_latitude, last_longitude, full_name)").execute()
+        return {
+            "total_subscriptions": len(subs.data),
+            "users": subs.data
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 @router.get("/active")
 async def get_active_crises():

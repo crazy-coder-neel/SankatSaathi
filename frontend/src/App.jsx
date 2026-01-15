@@ -120,7 +120,23 @@ const MainApp = () => {
     }
   }, [isSystemOnline]);
 
-  // --- Push Notification Registration ---
+  // --- Debug: Test Notification ---
+  const showTestNotification = () => {
+    if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification('SankatSaathi: System Test', {
+          body: 'This is a test notification to verify your browser settings. If you see this, notifications are working!',
+          icon: '/vite.svg',
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
+          tag: 'test-sync'
+        });
+      });
+    } else {
+      alert("Notification permission not granted or SW not ready.");
+    }
+  };
+
   useEffect(() => {
     const registerPush = async () => {
       if (user && 'serviceWorker' in navigator && 'PushManager' in window) {
@@ -205,7 +221,7 @@ const MainApp = () => {
     <div className="relative w-full h-screen bg-crisis-deep selection:bg-crisis-red/30 selection:text-white overflow-hidden">
 
       {/* 2D UI Layer - Navbar only shows if NOT on login page */}
-      {!isLoginPage && <Navbar user={user} signOut={signOut} isSystemOnline={isSystemOnline} />}
+      {!isLoginPage && <Navbar user={user} signOut={signOut} isSystemOnline={isSystemOnline} onTestPush={showTestNotification} />}
 
       {/* Content Routes - Scrollable Container for Pages */}
       <div className={`absolute inset-0 ${!isLoginPage ? 'pt-[80px]' : ''} z-20 overflow-y-auto custom-scrollbar pointer-events-none`}>

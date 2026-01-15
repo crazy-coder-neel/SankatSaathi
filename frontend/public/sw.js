@@ -29,16 +29,23 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', function (event) {
-    if (!event.data) return;
+    console.log('SW: Push Received', event);
+    if (!event.data) {
+        console.warn('SW: Push event had no data.');
+        return;
+    }
 
     try {
         const data = event.data.json();
+        console.log('SW: Push Data Parsing', data);
+
         const options = {
             body: data.body,
-            icon: '/vite.svg', // Default icon
+            icon: '/vite.svg',
             vibrate: [200, 100, 200],
             data: data.data,
             tag: 'emergency-alert',
+            requireInteraction: true, // Keep notification visible until user clicks/dismisses
             actions: [
                 { action: 'open', title: 'View Details' }
             ]
@@ -46,6 +53,8 @@ self.addEventListener('push', function (event) {
 
         event.waitUntil(
             self.registration.showNotification(data.title, options)
+                .then(() => console.log('SW: Notification Shown'))
+                .catch(err => console.error('SW: Failed to show notification', err))
         );
     } catch (e) {
         console.error('Push error:', e);
