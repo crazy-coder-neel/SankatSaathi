@@ -46,20 +46,11 @@ app.include_router(crisis_router, prefix="/api")
 app.include_router(crisis_router) # Fallback if /api is stripped by proxy
 
 # Feature 2: News Router
+# Feature 2: News Router
 try:
     from Feature2_news.news_router import router as news_router
 except ImportError:
-    # Try importing from backend base if running from root
-    try:
-        from backend.Feature2_news.news_router import router as news_router
-    except ImportError:
-         # One last try with hyphen replaced by underscore logic if Python treats it that way?
-         # Actually folders with hyphens are tricky in Python imports. 
-         # I should verify if I can import `Feature2-news`. 
-         # Python modules cannot have hyphens.
-         # ACTION: I will need to rename the folder `backend/Feature2-news` to `backend/Feature2_news` or uses importlib.
-         # For now, let's assume I will rename the folder in the next step.
-         from backend.Feature2_news.news_router import router as news_router
+    from backend.Feature2_news.news_router import router as news_router
 
 app.include_router(news_router, prefix="/api")
 

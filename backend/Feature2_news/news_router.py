@@ -20,7 +20,7 @@ DB_FILE = os.path.join(BASE_DIR, 'disaster_news.db')
 
 # API KEYS (Ideally move to .env, but keeping here for direct port as per plan)
 # NOTE: User provided this key in the original Flask app
-GNEWS_API_KEY = "36b38d93610935363447703e54bb8688"
+GNEWS_API_KEY = os.getenv("GNEWS_API_KEY", "36b38d93610935363447703e54bb8688")
 
 # Keywords for disaster detection and categorization
 DISASTER_KEYWORDS = {
