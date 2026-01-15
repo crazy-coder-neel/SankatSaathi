@@ -11,3 +11,5 @@ google-generativeai
 python-dotenv
 supabase
 pywebpush
+twilio
+requests

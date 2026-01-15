@@ -25,6 +25,7 @@ import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import ResourcesPage from './pages/ResourcesPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import NewsPage from './pages/NewsPage';
 import Login from './components/Login';
 import IncidentReport from './components/IncidentReport';
 
@@ -234,6 +235,11 @@ const MainApp = () => {
             <Route path="/analytics" element={
               <ProtectedRoute>
                 <AnalyticsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/news" element={
+              <ProtectedRoute>
+                <NewsPage />
               </ProtectedRoute>
             } />
           </Routes>

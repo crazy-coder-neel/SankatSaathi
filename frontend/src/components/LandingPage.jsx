@@ -82,11 +82,11 @@ const LandingPage = ({ onSystemInitialize }) => {
                             <Card className="bg-[#101018] p-8 border border-white/10 flex flex-col justify-between" key="2">
                                 <div>
                                     <div className="text-xs font-mono uppercase text-crisis-red mb-4">Module 02</div>
-                                    <h3 className="text-2xl md:text-4xl font-bold text-white mb-4">Threat Prediction</h3>
-                                    <p className="text-gray-400 text-base md:text-lg">AI-driven algorithms forecast potential crisis escalation before it happens.</p>
+                                    <h3 className="text-2xl md:text-4xl font-bold text-white mb-4">Global Intelligence</h3>
+                                    <p className="text-gray-400 text-base md:text-lg">Real-time surveillance and AI-filtered news analysis from global sources.</p>
                                 </div>
-                                <Link to="/analytics" className="text-crisis-cyan font-bold uppercase tracking-widest text-sm hover:text-white transition-colors flex items-center gap-2">
-                                    Analyze Data <ArrowRight className="w-4 h-4" />
+                                <Link to="/news" className="text-crisis-cyan font-bold uppercase tracking-widest text-sm hover:text-white transition-colors flex items-center gap-2">
+                                    Access Feed <ArrowRight className="w-4 h-4" />
                                 </Link>
                             </Card>
                             <Card className="bg-[#101018] p-8 border border-white/10 flex flex-col justify-between" key="3">
