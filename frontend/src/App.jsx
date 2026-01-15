@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import * as THREE from 'three';
+import { supabase } from './lib/supabaseClient';
 
 // Helper for VAPID key
 function urlBase64ToUint8Array(base64String) {
@@ -137,8 +138,9 @@ const MainApp = () => {
             });
 
             // Sync with backend
-            const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-            await fetch(`${apiUrl}/api/crisis/subscribe`, {
+            const apiUrl = import.meta.env.VITE_BACKEND_URL || '';
+            const fetchUrl = apiUrl ? `${apiUrl}/api/crisis/subscribe` : '/api/crisis/subscribe';
+            await fetch(fetchUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({

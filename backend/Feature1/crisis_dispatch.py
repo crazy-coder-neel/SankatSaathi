@@ -142,7 +142,7 @@ async def create_crisis_alert(
         try:
             # Fetch subscriptions and user locations
             # Join with profiles to get last locations
-            res = supabase.table("push_subscriptions").select("subscription, user_id, profiles(last_latitude, last_longitude)").execute()
+            print(f"DEBUG: Found {len(res.data)} total push subscriptions.")
             
             payload = {
                 "title": f"🚨 EMERGENCY: {title}",
@@ -154,15 +154,24 @@ async def create_crisis_alert(
                 }
             }
 
+            notification_count = 0
             for row in res.data:
                 profile = row.get("profiles")
-                if not profile: continue
+                if not profile:
+                    print(f"DEBUG: No profile found for sub user_id: {row.get('user_id')}")
+                    continue
                 
                 p_lat, p_lon = profile.get("last_latitude"), profile.get("last_longitude")
                 if p_lat is not None and p_lon is not None:
                     dist = geodesic((p_lat, p_lon), (latitude, longitude)).km
+                    print(f"DEBUG: User {row.get('user_id')} distance: {dist:.2f}km")
                     if dist <= RADIUS_KM:
-                        send_web_push(row["subscription"], payload)
+                        success = send_web_push(row["subscription"], payload)
+                        if success: notification_count += 1
+                else:
+                    print(f"DEBUG: User {row.get('user_id')} has NO location synced.")
+            
+            print(f"DEBUG: Notifications triggered for {notification_count} users.")
         except Exception as e:
             print(f"Push Notification Logic Failed: {e}")
 

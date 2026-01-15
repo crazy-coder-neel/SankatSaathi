@@ -13,9 +13,17 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Only intercept GET requests for same-origin assets we want to cache
+    if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
+            // Return cached response OR fetch from network
+            return response || fetch(event.request).catch(() => {
+                // Fallback or just let it fail if network is down
+            });
         })
     );
 });
