@@ -31,11 +31,21 @@ const CrisisDashboard = () => {
 
     // Initial Data Fetch
     useEffect(() => {
+        // Request location with better error handling
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => setUserLocation(pos.coords),
-                (err) => console.error("Location access denied.")
+                (pos) => {
+                    console.log('Location obtained:', pos.coords);
+                    setUserLocation(pos.coords);
+                },
+                (err) => {
+                    console.error("Location access error:", err);
+                    alert("Location access is required for proximity alerts. Please enable location permissions in your browser settings.");
+                }
             );
+        } else {
+            console.warn("Geolocation not supported by browser");
+            alert("Your browser doesn't support geolocation. Some features may not work.");
         }
 
         fetchActiveCrises();
@@ -166,9 +176,16 @@ const CrisisDashboard = () => {
     const fetchActiveCrises = async () => {
         try {
             const url = getApiEndpoint('crisis/active');
+            console.log('Fetching crises from:', url);
             const res = await fetch(url);
+            if (!res.ok) {
+                console.error('Crisis fetch failed:', res.status, res.statusText);
+                return;
+            }
             const data = await res.json();
+            console.log('Crisis data received:', data);
             setActiveCrises(data.crises || []);
+            console.log('Active crises set:', data.crises?.length || 0);
         } catch (e) {
             console.error("Failed to fetch crises", e);
         }

@@ -49,10 +49,15 @@ const NewsPage = () => {
 
             // 2. Get Data (GET)
             const url = getApiEndpoint(`news?location=${encodeURIComponent(searchLocation)}`);
+            console.log('Fetching news from:', url);
             const getRes = await fetch(url);
-            if (!getRes.ok) throw new Error("Data retrieval failed");
+            if (!getRes.ok) {
+                console.error('News fetch failed:', getRes.status, getRes.statusText);
+                throw new Error("Data retrieval failed");
+            }
 
             const data = await getRes.json();
+            console.log('News data received:', data.length, 'articles');
             setNews(data);
             setLastUpdated(new Date().toLocaleTimeString());
             addLog(`> Visual matrix updated. ${data.length} items loaded.`);

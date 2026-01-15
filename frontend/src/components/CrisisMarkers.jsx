@@ -55,14 +55,19 @@ export const CrisisMarkers = () => {
     React.useEffect(() => {
         const fetchMarkers = async () => {
             const url = getApiEndpoint('crisis/active');
-            console.log(`Fetching markers from: ${url}`);
+            console.log(`[CrisisMarkers] Fetching from: ${url}`);
 
             try {
                 const res = await fetch(url);
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                if (!res.ok) {
+                    console.error('[CrisisMarkers] HTTP error:', res.status);
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
 
                 const data = await res.json();
+                console.log('[CrisisMarkers] Data received:', data);
                 const crises = data.crises || [];
+                console.log('[CrisisMarkers] Crises count:', crises.length);
 
                 const mapped = crises.map(c => ({
                     id: c.id,
@@ -73,13 +78,13 @@ export const CrisisMarkers = () => {
                 }));
 
                 if (mapped.length > 0) {
+                    console.log('[CrisisMarkers] Setting incidents:', mapped.length);
                     setIncidents(mapped);
                 } else {
-                    console.warn("No active crises found on server.");
+                    console.warn("[CrisisMarkers] No active crises found");
                 }
             } catch (err) {
-                console.error("FAILED to fetch markers:", err);
-                console.error("Ensure Backend is running");
+                console.error("[CrisisMarkers] Fetch failed:", err);
             }
         };
 
