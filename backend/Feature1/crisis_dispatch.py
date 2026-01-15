@@ -20,23 +20,21 @@ base_dir = Path(__file__).parent.parent.resolve()
 if str(base_dir) not in sys.path:
     sys.path.insert(0, str(base_dir))
 
-# Import AI & Twilio Services (Relative imports are safer within the same package)
+# Import AI & Web Push Services
 try:
     from .gemini_service import analyze_crisis_with_llm
-    from .twilio_service import send_emergency_sms
+    from .push_service import send_web_push
 except ImportError:
     # Fallback to absolute if relative fails
     from Feature1.gemini_service import analyze_crisis_with_llm
-    from Feature1.twilio_service import send_emergency_sms
+    from Feature1.push_service import send_web_push
 
 # Force load from backend directory
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # Settings
-EMERGENCY_CONTACTS = [
-    num for num in [os.getenv("TEST1_MOB_NO")] if num
-]
+RADIUS_KM = 5
 
 # Supabase Client Setup
 SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
@@ -62,6 +60,10 @@ class CrisisSeverity(str, Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
+class PushSubscription(BaseModel):
+    user_id: str
+    subscription: dict
+
 # --- Realtime Management ---
 async def broadcast_to_dashboards(payload: dict):
     print(f"DEBUG: Broadcast: {payload.get('type')}")
@@ -69,20 +71,22 @@ async def broadcast_to_dashboards(payload: dict):
 
 # --- Endpoints ---
 
-@router.get("/test-sms")
-async def test_sms_diagnostic():
-    """Diagnostic endpoint to verify Twilio connectivity."""
-    if not EMERGENCY_CONTACTS:
-        return {"status": "error", "message": "No TEST1_MOB_NO found in environment vars."}
+@router.post("/subscribe")
+async def subscribe_push(sub: PushSubscription):
+    """Stores a user's push subscription."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not initialized.")
     
-    test_number = EMERGENCY_CONTACTS[0]
-    success = send_emergency_sms(test_number, "🛠️ SankatSaathi diagnostic: Twilio is connected!")
-    
-    return {
-        "status": "success" if success else "failed",
-        "recipient": test_number,
-        "message": "Check your phone or Twilio logs if failed."
-    }
+    try:
+        # Upsert subscription
+        data = supabase.table("push_subscriptions").upsert({
+            "user_id": sub.user_id,
+            "subscription": sub.subscription
+        }, on_conflict="user_id").execute()
+        return {"status": "success", "message": "Subscribed"}
+    except Exception as e:
+        print(f"DEBUG: Subscription failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/alert")
 async def create_crisis_alert(
@@ -134,24 +138,33 @@ async def create_crisis_alert(
         data = supabase.table("incidents").insert(new_incident).execute()
         incident_id = data.data[0]["id"] if data.data else None
 
-        # 4. SMS Alerts to EMERGENCY_CONTACTS (Direct Test Loop)
-        for phone in EMERGENCY_CONTACTS:
-            # Assume within distance for test numbers to guarantee trigger
-            msg = f"🚨 SankatSaathi ALERT: {title} reported. Type: {crisis_type}. Severity: {final_severity}. Stay safe!"
-            send_emergency_sms(phone, msg)
-
-        # 5. Dynamic SMS to Nearby Users from DB
+        # 4. Notify Nearby Users via Web Push
         try:
-            res = supabase.table("profiles").select("phone_number, last_latitude, last_longitude").not_.is_("phone_number", "null").execute()
-            for p in res.data:
-                p_lat, p_lon = p.get("last_latitude"), p.get("last_longitude")
-                if p_lat and p_lon and p.get("phone_number"):
+            # Fetch subscriptions and user locations
+            # Join with profiles to get last locations
+            res = supabase.table("push_subscriptions").select("subscription, user_id, profiles(last_latitude, last_longitude)").execute()
+            
+            payload = {
+                "title": f"🚨 EMERGENCY: {title}",
+                "body": f"{crisis_type.capitalize()} alert near you. Severity: {final_severity}. Stay safe!",
+                "data": {
+                    "incident_id": incident_id,
+                    "latitude": latitude,
+                    "longitude": longitude
+                }
+            }
+
+            for row in res.data:
+                profile = row.get("profiles")
+                if not profile: continue
+                
+                p_lat, p_lon = profile.get("last_latitude"), profile.get("last_longitude")
+                if p_lat is not None and p_lon is not None:
                     dist = geodesic((p_lat, p_lon), (latitude, longitude)).km
-                    if dist <= 5 and p["phone_number"] not in EMERGENCY_CONTACTS:
-                        msg = f"🚨 SankatSaathi ALERT: {title} reported near you ({dist:.1f}km). Stay safe!"
-                        send_emergency_sms(p["phone_number"], msg)
+                    if dist <= RADIUS_KM:
+                        send_web_push(row["subscription"], payload)
         except Exception as e:
-            print(f"Dynamic SMS Logic Failed: {e}")
+            print(f"Push Notification Logic Failed: {e}")
 
         return {"message": "Incident Reported & Alerts Sent", "incident_id": incident_id}
 

@@ -4,6 +4,18 @@ import { OrbitControls, Stars } from '@react-three/drei';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import * as THREE from 'three';
 
+// Helper for VAPID key
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 // Components
 import EarthScene from './components/EarthScene';
 import { CrisisMarkers } from './components/CrisisMarkers';
@@ -105,6 +117,76 @@ const MainApp = () => {
       }
     }
   }, [isSystemOnline]);
+
+  // --- Push Notification Registration ---
+  useEffect(() => {
+    const registerPush = async () => {
+      if (user && 'serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration();
+          const sw = registration || await navigator.serviceWorker.register('/sw.js');
+
+          // Wait for service worker to be ready
+          await navigator.serviceWorker.ready;
+
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            const subscription = await sw.pushManager.getSubscription() || await sw.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY)
+            });
+
+            // Sync with backend
+            const apiUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+            await fetch(`${apiUrl}/api/crisis/subscribe`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: user.id,
+                subscription: subscription
+              })
+            });
+            console.log("Push System: OPERATIONAL");
+          } else {
+            console.warn("Push System: Permission DENIED");
+          }
+        } catch (err) {
+          console.error("Push registration error:", err);
+        }
+      } else {
+        console.warn("Push System: Browser NOT SUPPORTED / Secure Context Required");
+      }
+    };
+    registerPush();
+  }, [user]);
+
+  // --- Global Location Tracking for Notifications ---
+  useEffect(() => {
+    let watchId = null;
+    if (user && navigator.geolocation) {
+      console.log("Location System: INITIALIZING");
+      watchId = navigator.geolocation.watchPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              last_latitude: latitude,
+              last_longitude: longitude
+            })
+            .eq('id', user.id);
+
+          if (error) console.error("Location System Error:", error);
+          else console.log("Location System: SYNCED", { latitude, longitude });
+        },
+        (err) => console.error("Location System Denied:", err.message),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [user]);
 
   if (loading) {
     return (

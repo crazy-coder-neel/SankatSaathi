@@ -13,9 +13,15 @@ if str(current_dir) not in sys.path:
 # Import routers
 try:
     from Feature1.crisis_dispatch import router as crisis_router
-except ImportError:
-    # If standard import fails, try relative or absolute from backend
-    from backend.Feature1.crisis_dispatch import router as crisis_router
+except ImportError as e:
+    # If the error is NOT about missing 'Feature1', it's a nested dependency error
+    if "Feature1" not in str(e):
+        raise e
+    # Fallback for different execution contexts
+    try:
+        from backend.Feature1.crisis_dispatch import router as crisis_router
+    except ImportError:
+        raise e
 
 # Create FastAPI app
 app = FastAPI(
@@ -52,3 +58,7 @@ async def root(request: Request):
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
