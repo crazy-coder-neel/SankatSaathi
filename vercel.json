@@ -15,7 +15,7 @@
             "destination": "/backend/app.py"
         },
         {
-            "source": "/(.*)",
+            "source": "/((?!assets/|.*\\..*).*)",
             "destination": "/index.html"
         }
     ]
