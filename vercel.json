@@ -19,28 +19,11 @@
             "dest": "backend/app.py"
         },
         {
-            "src": "/sw.js",
-            "dest": "frontend/sw.js"
-        },
-        {
-            "src": "/manifest.json",
-            "dest": "frontend/manifest.json"
-        },
-        {
-            "src": "/logo.jpg",
-            "dest": "frontend/logo.jpg"
-        },
-        {
-            "src": "/assets/(.*)",
-            "dest": "frontend/assets/$1"
-        },
-        {
-            "src": "/(.*\\.(js|css|png|jpg|jpeg|webp|svg|json|ico|mp3))",
-            "dest": "frontend/$1"
+            "handle": "filesystem"
         },
         {
             "src": "/(.*)",
-            "dest": "frontend/index.html"
+            "dest": "/frontend/$1"
         }
     ]
 }
