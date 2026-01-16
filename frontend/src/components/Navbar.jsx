@@ -20,10 +20,12 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 h-auto lg:h-[80px] bg-gradient-to-b from-black/80 to-transparent pointer-events-none flex flex-col">
             {/* Top Status Bar - Hidden on Mobile */}
-            <div className="hidden lg:flex w-full h-[40px] border-b border-white/10 bg-glass-bg backdrop-blur-md pointer-events-auto items-center justify-between px-8">
+            <div className="hidden lg:flex w-full h-[40px] border-b border-white/5 bg-[#050508]/80 backdrop-blur-md pointer-events-auto items-center justify-between px-8">
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                        <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full border border-crisis-red/50 shadow-[0_0_10px_#FF3B30]" />
+                        <div className="w-8 h-8 rounded-full bg-crisis-red flex items-center justify-center shadow-[0_0_10px_#FF3B30] overflow-hidden">
+                            <span className="font-display font-bold text-white text-xs">SS</span>
+                        </div>
                         <span className="text-sm font-display font-bold tracking-wider text-white px-2">SANKAT<span className="text-crisis-red">SAATHI</span></span>
                     </div>
                     <div className="h-4 w-[1px] bg-white/10"></div>
@@ -38,8 +40,8 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
                         Test Push
                     </button>
                     <div className="flex items-center gap-2">
-                        <span className={`w-1.5 h-1.5 rounded-full ${isSystemOnline ? 'bg-green-500 animate-none' : 'bg-red-500 animate-pulse'}`}></span>
-                        <span className={`text-[10px] font-mono ${isSystemOnline ? 'text-green-500' : 'text-red-500'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSystemOnline ? 'bg-signal-success animate-none' : 'bg-signal-error animate-pulse'}`}></span>
+                        <span className={`text-[10px] font-mono ${isSystemOnline ? 'text-signal-success' : 'text-signal-error'}`}>
                             SYSTEM: {isSystemOnline ? 'ONLINE' : 'OFFLINE MODE'}
                         </span>
                     </div>
@@ -55,8 +57,10 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
 
                 {/* Mobile: Logo (Visible only on mobile/tablet where top bar is hidden) */}
                 <div className="flex lg:hidden items-center gap-2">
-                    <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full border border-crisis-red/30" />
-                    <span className="font-bold text-white tracking-wider">SANKAT<span className="text-crisis-red">SAATHI</span></span>
+                    <div className="w-8 h-8 rounded-full bg-crisis-red flex items-center justify-center shadow-[0_0_10px_#FF3B30] overflow-hidden">
+                        <span className="font-display font-bold text-white text-xs">SS</span>
+                    </div>
+                    <span className="font-bold text-white tracking-wider font-display">SANKAT<span className="text-crisis-red">SAATHI</span></span>
                 </div>
 
                 {/* Desktop: Navigation Links */}
@@ -64,7 +68,7 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
                     <Link
                         to="/"
                         className={clsx(
-                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center font-mono",
                             location.pathname === '/' ? "text-white" : "text-gray-500 hover:text-white"
                         )}
                     >
@@ -76,7 +80,7 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
                     <Link
                         to="/intelligence"
                         className={clsx(
-                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center font-mono",
                             location.pathname === '/intelligence' ? "text-white" : "text-gray-500 hover:text-white"
                         )}
                     >
@@ -88,7 +92,7 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
                     <Link
                         to="/coordination"
                         className={clsx(
-                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center font-mono",
                             location.pathname === '/coordination' ? "text-white" : "text-gray-500 hover:text-white"
                         )}
                     >
@@ -100,7 +104,7 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
                     <Link
                         to="/analytics"
                         className={clsx(
-                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center",
+                            "relative h-10 px-6 text-sm font-medium transition-all duration-300 uppercase tracking-widest clip-path-slant flex items-center font-mono",
                             location.pathname === '/analytics' ? "text-white" : "text-gray-500 hover:text-white"
                         )}
                     >
@@ -122,25 +126,25 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
                     {/* Widget 2 */}
                     <div className="flex flex-col items-end border-r border-white/10 pr-4">
                         <span className="text-[10px] text-gray-500 font-mono uppercase">Critical</span>
-                        <span className="text-lg font-mono font-bold text-crisis-red animate-pulse leading-none">12</span>
+                        <span className="text-lg font-mono font-bold text-signal-error animate-pulse leading-none">12</span>
                     </div>
 
                     {/* Profile */}
                     <div className="flex items-center gap-3 pl-2 group cursor-pointer">
                         <div className="text-right">
-                            <div className="text-xs font-bold text-white group-hover:text-crisis-red transition-colors uppercase">
+                            <div className="text-xs font-bold text-white group-hover:text-crisis-red transition-colors uppercase font-display">
                                 {profile?.full_name || user?.user_metadata?.full_name || 'Agni'}
                             </div>
                             <div className="text-[10px] text-gray-500 font-mono">ID: {user?.id?.slice(0, 6) || 'UNKNOWN'}</div>
                         </div>
                         <div className="relative">
                             <UserCircle className="w-8 h-8 text-gray-400 group-hover:text-white transition-colors" />
-                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-black rounded-full"></div>
+                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-signal-success border-2 border-black rounded-full"></div>
                         </div>
 
                         <button
                             onClick={handleLogout}
-                            className="ml-4 px-3 py-1 border border-crisis-red/30 bg-crisis-red/10 text-crisis-red text-[10px] font-bold uppercase hover:bg-crisis-red hover:text-white transition-all duration-300 rounded-sm"
+                            className="ml-4 px-3 py-1 border border-crisis-red/30 bg-crisis-red/10 text-crisis-red text-[10px] font-bold uppercase hover:bg-crisis-red hover:text-white transition-all duration-300 rounded-sm font-mono"
                         >
                             Logout
                         </button>
@@ -162,16 +166,16 @@ const Navbar = ({ isSystemOnline, onTestPush }) => {
 
             {/* Mobile Menu Overlay */}
             {isMenuOpen && (
-                <div className="lg:hidden bg-black/95 backdrop-blur-xl border-t border-white/10 pointer-events-auto">
-                    <div className="flex flex-col p-4 space-y-4">
-                        <Link to="/" onClick={() => setIsMenuOpen(false)} className="text-lg font-display text-gray-300 hover:text-white">OVERVIEW</Link>
-                        <Link to="/intelligence" onClick={() => setIsMenuOpen(false)} className="text-lg font-display text-gray-300 hover:text-white">INCIDENTS</Link>
-                        <Link to="/coordination" onClick={() => setIsMenuOpen(false)} className="text-lg font-display text-gray-300 hover:text-white">COORDINATION</Link>
-                        <Link to="/analytics" onClick={() => setIsMenuOpen(false)} className="text-lg font-display text-gray-300 hover:text-white">ANALYTICS</Link>
-                        <div className="h-[1px] bg-white/10 my-2"></div>
+                <div className="lg:hidden bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/10 pointer-events-auto h-screen">
+                    <div className="flex flex-col p-6 space-y-6">
+                        <Link to="/" onClick={() => setIsMenuOpen(false)} className="text-xl font-display font-medium text-gray-300 hover:text-white uppercase tracking-widest border-l-2 border-transparent hover:border-crisis-red pl-4 transition-all">OVERVIEW</Link>
+                        <Link to="/intelligence" onClick={() => setIsMenuOpen(false)} className="text-xl font-display font-medium text-gray-300 hover:text-white uppercase tracking-widest border-l-2 border-transparent hover:border-crisis-red pl-4 transition-all">INCIDENTS</Link>
+                        <Link to="/coordination" onClick={() => setIsMenuOpen(false)} className="text-xl font-display font-medium text-gray-300 hover:text-white uppercase tracking-widest border-l-2 border-transparent hover:border-crisis-red pl-4 transition-all">COORDINATION</Link>
+                        <Link to="/analytics" onClick={() => setIsMenuOpen(false)} className="text-xl font-display font-medium text-gray-300 hover:text-white uppercase tracking-widest border-l-2 border-transparent hover:border-crisis-red pl-4 transition-all">ANALYTICS</Link>
+                        <div className="h-[1px] bg-white/10 my-4"></div>
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-400">User: {profile?.full_name || 'Agni'}</span>
-                            <button onClick={handleLogout} className="text-red-500 text-sm font-bold uppercase">Logout</button>
+                            <span className="text-sm text-gray-400 font-mono">User: {profile?.full_name || 'Agni'}</span>
+                            <button onClick={handleLogout} className="text-crisis-red text-sm font-bold uppercase font-mono tracking-wider border border-crisis-red/30 px-3 py-1 bg-crisis-red/10">Logout</button>
                         </div>
                     </div>
                 </div>

@@ -3,12 +3,15 @@ import { useFrame } from '@react-three/fiber';
 import { Sphere, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { useEarthTextures } from '../hooks/useEarthTextures';
+import AsteroidField from './AsteroidField';
+import OrbitalRings from './OrbitalRings';
 
 const EarthScene = ({ setRotation }) => {
     const earthRef = useRef();
     const cloudsRef = useRef();
     const groupRef = useRef();
     const wireframeRef = useRef();
+    const glowRef = useRef();
 
     // Load textures
     const { colorMap, normalMap, specularMap, cloudsMap, lightsMap } = useEarthTextures();
@@ -34,6 +37,22 @@ const EarthScene = ({ setRotation }) => {
 
     return (
         <group ref={groupRef} rotation={[0, 0, 23.5 * Math.PI / 180]} >
+            {/* Sun Glow - Ambient Lighting from behind */}
+            <pointLight position={[10, 10, 10]} intensity={1.5} color="#ffffff" />
+            <pointLight position={[-10, -10, -5]} intensity={0.3} color="#ff6b9d" />
+
+            {/* Outer Glow Aura */}
+            <mesh scale={[1.15, 1.15, 1.15]}>
+                <sphereGeometry args={[1, 32, 32]} />
+                <meshBasicMaterial
+                    color="#4db5ff"
+                    transparent
+                    opacity={0.15}
+                    side={THREE.BackSide}
+                    blending={THREE.AdditiveBlending}
+                />
+            </mesh>
+
             {/* Atmosphere Glow */}
             <mesh scale={[1.02, 1.02, 1.02]}>
                 <sphereGeometry args={[1, 32, 32]} />
@@ -93,8 +112,14 @@ const EarthScene = ({ setRotation }) => {
                 />
             </mesh>
 
+            {/* Orbital Rings */}
+            <OrbitalRings />
+
+            {/* Asteroid Field */}
+            <AsteroidField count={400} radius={25} insideColor="#ff3b30" outsideColor="#4db5ff" />
         </group>
     );
 };
+
 
 export default EarthScene;
